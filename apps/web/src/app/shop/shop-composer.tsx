@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DemoTask, ShoppingOption } from "@errand/shared";
+import type {
+  DemoOrder,
+  DemoTask,
+  MerchantOrder,
+  ShoppingOption,
+} from "@errand/shared";
+import {
+  connectArcWallet,
+  formatPickupProof,
+  fundEscrowOrder,
+  type EscrowConfig,
+} from "@/lib/arc-escrow";
 
 const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:3001";
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
@@ -14,19 +25,68 @@ const suggestions = [
 
 const formatUsdc = (microUsdc: string) =>
   (Number(microUsdc) / 1_000_000).toFixed(2);
+const formatResearchUsdc = (microUsdc: string) =>
+  (Number(microUsdc) / 1_000_000).toFixed(4);
 const shortHash = (value: string) => `${value.slice(0, 8)}…${value.slice(-6)}`;
+
+function hydrateShopperSecrets(task: DemoTask): DemoTask {
+  return {
+    ...task,
+    orders: task.orders.map((order) => {
+      if (order.paymentMode !== "arc_testnet") return order;
+      const key = `errand-pickup:${order.id}`;
+      const stored = window.sessionStorage.getItem(key);
+      if (stored) {
+        try {
+          const candidate = JSON.parse(stored) as {
+            pickupCode?: string;
+            deliveryCodeSalt?: string;
+          };
+          if (
+            candidate.pickupCode?.match(/^\d{6}$/) &&
+            candidate.deliveryCodeSalt?.match(/^0x[0-9a-fA-F]{64}$/)
+          ) {
+            return { ...order, ...candidate };
+          }
+        } catch {
+          window.sessionStorage.removeItem(key);
+        }
+      }
+      const randomNumber = window.crypto.getRandomValues(
+        new Uint32Array(1),
+      )[0]!;
+      const pickupCode = String(100_000 + (randomNumber % 900_000));
+      const saltBytes = window.crypto.getRandomValues(new Uint8Array(32));
+      const deliveryCodeSalt = `0x${Array.from(saltBytes, (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("")}`;
+      const secret = { pickupCode, deliveryCodeSalt };
+      window.sessionStorage.setItem(key, JSON.stringify(secret));
+      return { ...order, ...secret };
+    }),
+  };
+}
 
 export function ShopComposer() {
   const [prompt, setPrompt] = useState<string>(suggestions[0]);
   const [task, setTask] = useState<DemoTask | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyOrder, setBusyOrder] = useState("");
   const [error, setError] = useState("");
+  const [escrowConfig, setEscrowConfig] = useState<EscrowConfig | null>(null);
 
   useEffect(() => {
     const savedTaskId = window.localStorage.getItem("errand-demo-task");
     if (!savedTaskId) return;
     void fetch(`${agentUrl}/tasks/${savedTaskId}`).then(async (response) => {
-      if (response.ok) setTask((await response.json()) as DemoTask);
+      if (response.ok)
+        setTask(hydrateShopperSecrets((await response.json()) as DemoTask));
+    });
+  }, []);
+
+  useEffect(() => {
+    void fetch(`${agentUrl}/escrow/config`).then(async (response) => {
+      if (response.ok) setEscrowConfig((await response.json()) as EscrowConfig);
     });
   }, []);
 
@@ -42,7 +102,8 @@ export function ShopComposer() {
       return;
     const timer = window.setInterval(() => {
       void fetch(`${agentUrl}/tasks/${taskId}`).then(async (response) => {
-        if (response.ok) setTask((await response.json()) as DemoTask);
+        if (response.ok)
+          setTask(hydrateShopperSecrets((await response.json()) as DemoTask));
       });
     }, 550);
     return () => window.clearInterval(timer);
@@ -60,11 +121,53 @@ export function ShopComposer() {
       if (!response.ok) throw new Error("Could not start the shopping agent");
       const created = (await response.json()) as DemoTask;
       window.localStorage.setItem("errand-demo-task", created.id);
-      setTask(created);
+      setTask(hydrateShopperSecrets(created));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unexpected error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function fundOrder(order: DemoOrder) {
+    if (!escrowConfig?.enabled || !escrowConfig.contractAddress) {
+      setError("The Arc escrow contract has not been deployed/configured yet");
+      return;
+    }
+    setBusyOrder(order.id);
+    setError("");
+    try {
+      const session = await connectArcWallet();
+      const { transactionHash } = await fundEscrowOrder(
+        session,
+        escrowConfig,
+        order,
+      );
+      const response = await fetch(`${agentUrl}/orders/${order.id}/sync`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ transactionHash }),
+      });
+      if (!response.ok) throw new Error("Arc funding could not be verified");
+      const updated = (await response.json()) as MerchantOrder;
+      setTask((current) =>
+        current
+          ? {
+              ...current,
+              orders: current.orders.map((candidate) =>
+                candidate.id === updated.id
+                  ? { ...candidate, ...updated }
+                  : candidate,
+              ),
+            }
+          : current,
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Wallet funding failed",
+      );
+    } finally {
+      setBusyOrder("");
     }
   }
 
@@ -80,7 +183,7 @@ export function ShopComposer() {
       });
       if (!response.ok)
         throw new Error("Could not fund the selected demo plan");
-      setTask((await response.json()) as DemoTask);
+      setTask(hydrateShopperSecrets((await response.json()) as DemoTask));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unexpected error");
     } finally {
@@ -89,6 +192,9 @@ export function ShopComposer() {
   }
 
   function resetDemo() {
+    task?.orders.forEach((order) =>
+      window.sessionStorage.removeItem(`errand-pickup:${order.id}`),
+    );
     window.localStorage.removeItem("errand-demo-task");
     void fetch(`${agentUrl}/demo`, { method: "DELETE" });
     setTask(null);
@@ -147,7 +253,7 @@ export function ShopComposer() {
         <p className="mt-4 text-xs text-muted">
           {demoMode
             ? "Demo mode signs every quote cryptographically and simulates the 0.0005 USDC x402 settlement. No testnet funds move."
-            : "Arc Testnet mode pays 0.0005 USDC per quote through Circle Gateway. Purchase escrow remains simulated."}
+            : "Arc Testnet mode pays 0.0005 USDC per quote through Circle Gateway; every basket requires explicit shopper-wallet escrow funding."}
         </p>
       </section>
 
@@ -156,7 +262,16 @@ export function ShopComposer() {
           {error}
         </div>
       )}
-      {task && <TaskView task={task} busy={busy} onSelect={selectPlan} />}
+      {task && (
+        <TaskView
+          task={task}
+          busy={busy}
+          busyOrder={busyOrder}
+          escrowConfig={escrowConfig}
+          onSelect={selectPlan}
+          onFund={fundOrder}
+        />
+      )}
     </div>
   );
 }
@@ -164,11 +279,17 @@ export function ShopComposer() {
 function TaskView({
   task,
   busy,
+  busyOrder,
+  escrowConfig,
   onSelect,
+  onFund,
 }: {
   task: DemoTask;
   busy: boolean;
+  busyOrder: string;
+  escrowConfig: EscrowConfig | null;
   onSelect: (option: ShoppingOption) => void;
+  onFund: (order: DemoOrder) => void;
 }) {
   const researchSpend = task.payments.reduce(
     (sum, payment) => sum + Number(payment.amountMicroUsdc),
@@ -212,13 +333,42 @@ function TaskView({
             </div>
           )}
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-3 gap-3">
           <Metric label="Signed quotes" value={String(task.quotes.length)} />
           <Metric
             label="Research spend"
             value={`${(researchSpend / 1_000_000).toFixed(4)} USDC`}
           />
+          <Metric
+            label="Budget left"
+            value={`${formatResearchUsdc(task.remainingResearchBudgetMicroUsdc)} USDC`}
+          />
         </div>
+        {task.merchantDecisions.length > 0 && (
+          <div className="mt-4 space-y-2 rounded-2xl border border-info/20 bg-info/5 p-4">
+            <p className="text-[10px] uppercase tracking-wider text-info">
+              Autonomous query policy
+            </p>
+            {task.merchantDecisions.map((decision) => (
+              <div
+                key={decision.merchantId}
+                className="flex items-center justify-between gap-3 text-xs"
+              >
+                <span
+                  className={
+                    decision.selected ? "text-secondary" : "text-muted"
+                  }
+                >
+                  {decision.selected ? "Paid query" : "Skipped"} ·{" "}
+                  {decision.merchantName}
+                </span>
+                <span className="font-mono text-muted">
+                  score {decision.score.toFixed(3)} · {decision.distanceMeters}m
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         {task.payments.some((payment) => payment.mode === "gateway") && (
           <div className="mt-4 space-y-2">
             <p className="text-[10px] uppercase tracking-wider text-muted">
@@ -231,27 +381,34 @@ function TaskView({
               return (
                 <div
                   key={payment.id}
-                  className="flex items-center justify-between gap-3 text-xs"
+                  className="rounded-xl border border-border-subtle bg-background/40 p-3 text-xs"
                 >
-                  <span className="truncate text-secondary">
-                    {payment.merchantName}
-                  </span>
-                  {canLink ? (
-                    <a
-                      className="font-mono text-accent hover:underline"
-                      href={`${arcExplorerUrl}/tx/${payment.transaction}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {shortHash(payment.transaction!)}
-                    </a>
-                  ) : (
-                    <span className="font-mono text-muted">
-                      {payment.transaction
-                        ? shortHash(payment.transaction)
-                        : "settled"}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate text-secondary">
+                      {payment.merchantName} ·{" "}
+                      {formatResearchUsdc(payment.amountMicroUsdc)} USDC
                     </span>
-                  )}
+                    {canLink ? (
+                      <a
+                        className="font-mono text-accent hover:underline"
+                        href={`${arcExplorerUrl}/tx/${payment.transaction}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {shortHash(payment.transaction!)}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-muted">
+                        {payment.transaction
+                          ? shortHash(payment.transaction)
+                          : "settled"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 truncate font-mono text-[10px] text-muted">
+                    {payment.network} · {payment.endpoint} · payee{" "}
+                    {shortHash(payment.payee)}
+                  </p>
                 </div>
               );
             })}
@@ -265,8 +422,9 @@ function TaskView({
             <div>
               <p className="text-sm font-medium">Choose a verified plan</p>
               <p className="mt-1 text-xs text-muted">
-                Approving creates funded demo orders visible in the merchant
-                console.
+                {demoMode
+                  ? "Selecting a plan creates local escrow orders for the merchant console."
+                  : "Selecting a plan prepares Arc escrows; your wallet still approves every purchase."}
               </p>
             </div>
             {task.options.map((option) => (
@@ -279,7 +437,14 @@ function TaskView({
             ))}
           </>
         )}
-        {task.orders.length > 0 && <OrderTracker task={task} />}
+        {task.orders.length > 0 && (
+          <OrderTracker
+            task={task}
+            busyOrder={busyOrder}
+            escrowConfig={escrowConfig}
+            onFund={onFund}
+          />
+        )}
         {task.status === "error" && (
           <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
             <p className="font-medium text-red-100">The task stopped</p>
@@ -322,7 +487,7 @@ function OptionCard({
             onClick={onSelect}
             className="mt-3 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-black disabled:opacity-40"
           >
-            Approve demo escrow
+            {demoMode ? "Create demo orders" : "Prepare Arc orders"}
           </button>
         </div>
       </div>
@@ -340,13 +505,25 @@ function OptionCard({
   );
 }
 
-function OrderTracker({ task }: { task: DemoTask }) {
+function OrderTracker({
+  task,
+  busyOrder,
+  escrowConfig,
+  onFund,
+}: {
+  task: DemoTask;
+  busyOrder: string;
+  escrowConfig: EscrowConfig | null;
+  onFund: (order: DemoOrder) => void;
+}) {
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm font-medium">Live order tracking</p>
         <p className="mt-1 text-xs text-muted">
-          Open the merchant console in another tab and move each order forward.
+          {demoMode
+            ? "Open the merchant console in another tab and move each order forward."
+            : "Fund with the shopper wallet, then let each merchant advance the verified Arc escrow."}
         </p>
       </div>
       {task.orders.map((order) => (
@@ -358,7 +535,10 @@ function OrderTracker({ task }: { task: DemoTask }) {
             <div>
               <p className="font-medium">{order.merchantName}</p>
               <p className="mt-1 font-mono text-[10px] text-muted">
-                {shortHash(order.escrowReference)} · simulated escrow
+                {shortHash(order.escrowReference)} ·{" "}
+                {order.paymentMode === "arc_testnet"
+                  ? "Arc escrow"
+                  : "simulated escrow"}
               </p>
             </div>
             <StatusBadge status={order.status} />
@@ -379,9 +559,9 @@ function OrderTracker({ task }: { task: DemoTask }) {
             ))}
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-            <span className="text-xs text-muted">
+            <div className="text-xs text-muted">
               {order.status === "completed" ? (
-                "Pickup confirmed"
+                <span>Pickup confirmed · USDC released</span>
               ) : (
                 <>
                   Pickup code{" "}
@@ -394,10 +574,50 @@ function OrderTracker({ task }: { task: DemoTask }) {
                   )}
                 </>
               )}
-            </span>
-            <span className="font-mono text-sm">
-              {formatUsdc(order.totalMicroUsdc)} USDC
-            </span>
+              {order.status === "ready" &&
+                order.paymentMode === "arc_testnet" && (
+                  <button
+                    type="button"
+                    className="mt-2 block font-mono text-[10px] text-accent hover:underline"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(
+                        formatPickupProof(order),
+                      )
+                    }
+                  >
+                    Copy pickup proof
+                  </button>
+                )}
+              {order.lastTransaction && (
+                <a
+                  className="mt-2 block font-mono text-[10px] text-accent hover:underline"
+                  href={`${arcExplorerUrl}/tx/${order.lastTransaction}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Verify {shortHash(order.lastTransaction)} ↗
+                </a>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="block font-mono text-sm">
+                {formatUsdc(order.totalMicroUsdc)} USDC
+              </span>
+              {order.status === "awaiting_funding" && (
+                <button
+                  type="button"
+                  disabled={busyOrder === order.id || !escrowConfig?.enabled}
+                  onClick={() => onFund(order)}
+                  className="mt-2 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {busyOrder === order.id
+                    ? "Waiting for wallet…"
+                    : escrowConfig?.enabled
+                      ? "Approve & fund"
+                      : "Deploy escrow first"}
+                </button>
+              )}
+            </div>
           </div>
         </article>
       ))}

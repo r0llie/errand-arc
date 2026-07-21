@@ -1,9 +1,11 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
   type DemoEvent,
+  type MerchantDecision,
   type DemoOrder,
   type DemoOrderStatus,
   type DemoTask,
+  type MerchantOrder,
   type Merchant,
   type MerchantBasket,
   type Quote,
@@ -11,12 +13,17 @@ import {
   type ShoppingOption,
   type Sku,
   type SkuRequest,
+  MICROPAYMENT_COSTS,
+  RESEARCH_POLICY,
+  haversineMeters,
 } from "@errand/shared";
 import {
+  ResearchBudget,
   assertResearchBalance,
   buySignedQuote,
   isDemoMode,
 } from "./payments.js";
+import { getGatewayClient } from "./gateway.js";
 
 const tasks = new Map<string, DemoTask>();
 const wait = (milliseconds: number) =>
@@ -24,6 +31,63 @@ const wait = (milliseconds: number) =>
 
 const scaled = (baseMilli: number, people: number) =>
   Math.max(1, Math.round((baseMilli * people) / 4));
+const DEMO_LOCATION = { lat: 39.9208, lng: 32.8541 } as const;
+
+export function rankMerchantCandidates(
+  merchants: Merchant[],
+  requestedItems: SkuRequest[],
+): { merchants: Merchant[]; decisions: MerchantDecision[] } {
+  const requested = new Set(requestedItems.map((item) => item.sku));
+  const maximumPaidQueries = Math.min(
+    RESEARCH_POLICY.maxQuoteMerchants,
+    Number(RESEARCH_POLICY.taskCap / MICROPAYMENT_COSTS.quote),
+  );
+  const scored = merchants
+    .map((merchant) => {
+      const covered = merchant.supportedSkus.filter((sku) =>
+        requested.has(sku),
+      );
+      const coverage = covered.length / requested.size;
+      const distanceMeters = haversineMeters(
+        DEMO_LOCATION.lat,
+        DEMO_LOCATION.lng,
+        merchant.lat,
+        merchant.lng,
+      );
+      const distanceScore = Math.max(0, 1 - distanceMeters / 2_000);
+      const score =
+        0.45 * coverage +
+        0.25 * (merchant.qualityScore / 10) +
+        0.2 * distanceScore +
+        0.1 * (merchant.canNegotiate ? 1 : 0);
+      return { merchant, covered, coverage, distanceMeters, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  const selected = scored
+    .filter((candidate) => candidate.covered.length > 0)
+    .slice(0, maximumPaidQueries);
+  const selectedIds = new Set(selected.map(({ merchant }) => merchant.id));
+  return {
+    merchants: selected.map(({ merchant, distanceMeters }) => ({
+      ...merchant,
+      distanceMeters: Math.round(distanceMeters),
+    })),
+    decisions: scored.map((candidate) => ({
+      merchantId: candidate.merchant.id,
+      merchantName: candidate.merchant.name,
+      score: Number(candidate.score.toFixed(4)),
+      coverage: Number(candidate.coverage.toFixed(4)),
+      distanceMeters: Math.round(candidate.distanceMeters),
+      selected: selectedIds.has(candidate.merchant.id),
+      reason:
+        candidate.covered.length === 0
+          ? "Skipped: no requested SKU coverage"
+          : selectedIds.has(candidate.merchant.id)
+            ? `Selected: covers ${candidate.covered.length}/${requested.size} requested SKUs`
+            : "Skipped: paid-query limit reached",
+    })),
+  };
+}
 
 export function parseShoppingIntent(prompt: string): SkuRequest[] {
   const people = Math.min(
@@ -220,6 +284,8 @@ export function createTask(prompt: string): DemoTask {
     requestedItems: [],
     events: [],
     payments: [],
+    merchantDecisions: [],
+    remainingResearchBudgetMicroUsdc: RESEARCH_POLICY.taskCap.toString(),
     quotes: [],
     options: [],
     orders: [],
@@ -255,15 +321,23 @@ async function runTask(task: DemoTask) {
     const merchantResponse = await fetch(`${merchantApiUrl}/merchants`);
     if (!merchantResponse.ok)
       throw new Error("Merchant discovery service is unavailable");
-    const merchants = (await merchantResponse.json()) as Merchant[];
+    const discoveredMerchants = (await merchantResponse.json()) as Merchant[];
+    const ranked = rankMerchantCandidates(
+      discoveredMerchants,
+      task.requestedItems,
+    );
+    const merchants = ranked.merchants;
+    task.merchantDecisions = ranked.decisions;
     addEvent(
       task,
       "discovery",
-      `${merchants.length} merchants discovered`,
-      "Candidates ranked by coverage, price, and quality.",
+      `${merchants.length}/${discoveredMerchants.length} merchants selected`,
+      "The agent ranked candidates by SKU coverage, quality, distance, and negotiability before spending.",
     );
 
     await assertResearchBalance(merchants.length);
+    const budget = new ResearchBudget();
+    const payerAddress = getGatewayClient().address;
 
     task.status = "quoting";
     for (const merchant of merchants) {
@@ -273,9 +347,12 @@ async function runTask(task: DemoTask) {
         merchantApiUrl,
         taskId: task.id,
         items: task.requestedItems,
+        budget,
+        payerAddress,
       });
       task.quotes.push(result.quote);
       task.payments.push(result.payment);
+      task.remainingResearchBudgetMicroUsdc = budget.remaining.toString();
       addEvent(
         task,
         "payment",
@@ -283,6 +360,12 @@ async function runTask(task: DemoTask) {
         result.payment.mode === "gateway"
           ? `0.0005 USDC settled through Circle Gateway · ${result.payment.transaction}`
           : "0.0005 USDC research payment · local simulation",
+      );
+      addEvent(
+        task,
+        "quote",
+        `${merchant.name} quote verified`,
+        `EIP-712 signer ${result.quote.recoveredSigner.slice(0, 8)}… matches the merchant wallet; item hash, total, nonce, and expiry are valid.`,
       );
     }
 
@@ -332,6 +415,7 @@ export function selectOption(taskId: string, optionId: string) {
   task.selectedOptionId = optionId;
   task.status = "monitoring";
   const now = new Date().toISOString();
+  const liveEscrow = !isDemoMode();
   task.orders = option.merchantBaskets.map((basket) => ({
     id: randomUUID(),
     taskId,
@@ -340,35 +424,62 @@ export function selectOption(taskId: string, optionId: string) {
     merchantWallet: basket.merchantWallet,
     items: basket.items,
     totalMicroUsdc: basket.subtotalMicroUsdc,
-    status: "funded",
-    pickupCode: String(Math.floor(100_000 + Math.random() * 900_000)),
+    status: liveEscrow ? "awaiting_funding" : "funded",
+    pickupCode: liveEscrow
+      ? undefined
+      : String(Math.floor(100_000 + Math.random() * 900_000)),
+    deliveryCodeSalt: liveEscrow
+      ? undefined
+      : `0x${randomBytes(32).toString("hex")}`,
+    pickupDeadline: Math.floor(Date.now() / 1_000) + 24 * 60 * 60,
     escrowReference: `0x${randomBytes(32).toString("hex")}`,
-    paymentMode: "simulated",
+    escrowContract: process.env.ESCROW_CONTRACT_ADDRESS || undefined,
+    paymentMode: liveEscrow ? "arc_testnet" : "simulated",
     createdAt: now,
     updatedAt: now,
   }));
   addEvent(
     task,
     "order",
-    `${task.orders.length} orders funded`,
-    "Demo escrow references created. Merchants can now accept the orders.",
+    liveEscrow
+      ? `${task.orders.length} orders awaiting wallet funding`
+      : `${task.orders.length} orders funded`,
+    liveEscrow
+      ? "The shopper must approve USDC and fund each Arc escrow from their wallet."
+      : "Demo escrow references created. Merchants can now accept the orders.",
   );
   return task;
 }
 
 const transitions: Record<DemoOrderStatus, DemoOrderStatus | undefined> = {
+  awaiting_funding: "funded",
   funded: "preparing",
   preparing: "ready",
   ready: "completed",
   completed: undefined,
+  refunded: undefined,
+  disputed: undefined,
 };
 
-export function updateOrder(orderId: string, status: DemoOrderStatus) {
+export function updateOrder(
+  orderId: string,
+  status: DemoOrderStatus,
+  pickupCode?: string,
+) {
+  if (!isDemoMode()) {
+    throw new Error("Live orders can only advance from verified Arc events");
+  }
   for (const task of tasks.values()) {
     const order = task.orders.find((candidate) => candidate.id === orderId);
     if (!order) continue;
     if (transitions[order.status] !== status)
       throw new Error(`Cannot move ${order.status} to ${status}`);
+    if (
+      status === "completed" &&
+      (!order.pickupCode || pickupCode !== order.pickupCode)
+    ) {
+      throw new Error("Pickup code is invalid");
+    }
     order.status = status;
     order.updatedAt = new Date().toISOString();
     addEvent(
@@ -391,6 +502,71 @@ export function updateOrder(orderId: string, status: DemoOrderStatus) {
   throw new Error("Order not found");
 }
 
-export function listOrders() {
-  return listTasks().flatMap((task) => task.orders);
+export function getOrder(orderId: string) {
+  return listTasks()
+    .flatMap((task) => task.orders)
+    .find((order) => order.id === orderId);
+}
+
+export function recordOnchainOrderState(
+  orderId: string,
+  input: {
+    status: DemoOrderStatus;
+    buyerWallet: string;
+    escrowContract: string;
+    transactionHash: string;
+  },
+) {
+  for (const task of tasks.values()) {
+    const order = task.orders.find((candidate) => candidate.id === orderId);
+    if (!order) continue;
+    if (order.paymentMode !== "arc_testnet") {
+      throw new Error("Only Arc Testnet orders can be synchronized onchain");
+    }
+    order.status = input.status;
+    order.buyerWallet = input.buyerWallet;
+    order.escrowContract = input.escrowContract;
+    order.lastTransaction = input.transactionHash;
+    if (input.status === "funded")
+      order.fundTransaction = input.transactionHash;
+    if (input.status === "completed")
+      order.releaseTransaction = input.transactionHash;
+    order.updatedAt = new Date().toISOString();
+    addEvent(
+      task,
+      "order",
+      `${order.merchantName}: ${input.status} on Arc`,
+      `Verified ${input.transactionHash.slice(0, 10)}… against the deployed escrow.`,
+    );
+    if (task.orders.every((candidate) => candidate.status === "completed")) {
+      task.status = "completed";
+      addEvent(
+        task,
+        "order",
+        "Shopping task completed on Arc",
+        "Every escrow released USDC to its merchant after pickup proof.",
+      );
+    } else if (
+      task.orders.every((candidate) =>
+        ["completed", "refunded"].includes(candidate.status),
+      ) &&
+      task.orders.some((candidate) => candidate.status === "refunded")
+    ) {
+      task.status = "refunded";
+    }
+    return order;
+  }
+  throw new Error("Order not found");
+}
+
+export function listMerchantOrders(): MerchantOrder[] {
+  return listTasks().flatMap((task) => task.orders.map(redactOrder));
+}
+
+export function redactOrder({
+  pickupCode: _code,
+  deliveryCodeSalt: _salt,
+  ...order
+}: DemoOrder): MerchantOrder {
+  return order;
 }

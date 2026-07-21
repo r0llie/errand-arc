@@ -29,9 +29,9 @@ const config: HardhatUserConfig = {
   solidity: "0.8.24",
   networks: {
     arcTestnet: {
-      url: process.env.ARC_TESTNET_RPC!,
-      chainId: Number(process.env.ARC_TESTNET_CHAIN_ID),
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+      url: process.env.ARC_TESTNET_RPC_URL!,
+      chainId: Number(process.env.ARC_CHAIN_ID),
+      accounts: [process.env.AGENT_WALLET_PRIVATE_KEY!],
     },
   },
 };

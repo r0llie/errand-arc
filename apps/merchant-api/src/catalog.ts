@@ -17,7 +17,10 @@ export type MerchantRuntime = Merchant & {
   products: readonly CatalogProduct[];
 };
 
-type MerchantSeed = Omit<MerchantRuntime, "walletAddress" | "privateKey"> & {
+type MerchantSeed = Omit<
+  MerchantRuntime,
+  "walletAddress" | "privateKey" | "supportedSkus"
+> & {
   privateKeyEnv: string;
 };
 
@@ -277,6 +280,11 @@ export function loadMerchantCatalog(
       env[privateKeyEnv],
     ) as `0x${string}`;
     const account = privateKeyToAccount(privateKey);
-    return { ...seed, privateKey, walletAddress: account.address };
+    return {
+      ...seed,
+      privateKey,
+      walletAddress: account.address,
+      supportedSkus: [...new Set(seed.products.map((product) => product.sku))],
+    };
   });
 }

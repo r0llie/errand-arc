@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 
 config({ path: "../../.env.local" });
 
-const nextConfig: NextConfig = {/* config options here */};
+const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
+};
 
 export default nextConfig;
