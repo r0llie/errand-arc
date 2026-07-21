@@ -38,6 +38,7 @@ ANTHROPIC_API_KEY=
 AI_MODEL=claude-sonnet-4-6
 
 DEMO_MODE=true
+NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_AGENT_URL=http://localhost:3001
 MERCHANT_API_URL=http://localhost:4000

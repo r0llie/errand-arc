@@ -3,7 +3,6 @@ import {
   type DemoEvent,
   type DemoOrder,
   type DemoOrderStatus,
-  type DemoPayment,
   type DemoTask,
   type Merchant,
   type MerchantBasket,
@@ -13,6 +12,11 @@ import {
   type Sku,
   type SkuRequest,
 } from "@errand/shared";
+import {
+  assertResearchBalance,
+  buySignedQuote,
+  isDemoMode,
+} from "./payments.js";
 
 const tasks = new Map<string, DemoTask>();
 const wait = (milliseconds: number) =>
@@ -212,7 +216,7 @@ export function createTask(prompt: string): DemoTask {
     id: randomUUID(),
     prompt,
     status: "parsing",
-    mode: "local_demo",
+    mode: isDemoMode() ? "local_demo" : "arc_testnet",
     requestedItems: [],
     events: [],
     payments: [],
@@ -259,30 +263,26 @@ async function runTask(task: DemoTask) {
       "Candidates ranked by coverage, price, and quality.",
     );
 
+    await assertResearchBalance(merchants.length);
+
     task.status = "quoting";
     for (const merchant of merchants) {
       await wait(220);
-      const response = await fetch(
-        `${merchantApiUrl}/demo/merchants/${merchant.id}/quote`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ taskId: task.id, items: task.requestedItems }),
-        },
-      );
-      if (!response.ok)
-        throw new Error(`Quote request failed for ${merchant.name}`);
-      const result = (await response.json()) as {
-        quote: Quote;
-        payment: DemoPayment;
-      };
+      const result = await buySignedQuote({
+        merchant,
+        merchantApiUrl,
+        taskId: task.id,
+        items: task.requestedItems,
+      });
       task.quotes.push(result.quote);
       task.payments.push(result.payment);
       addEvent(
         task,
         "payment",
         `Paid ${merchant.name}`,
-        "0.0005 USDC research payment · local simulation",
+        result.payment.mode === "gateway"
+          ? `0.0005 USDC settled through Circle Gateway · ${result.payment.transaction}`
+          : "0.0005 USDC research payment · local simulation",
       );
     }
 

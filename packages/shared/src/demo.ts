@@ -16,6 +16,7 @@ export type DemoPayment = {
   network: "eip155:5042002";
   status: "settled";
   mode: "simulated" | "gateway";
+  transaction?: string;
   createdAt: string;
 };
 

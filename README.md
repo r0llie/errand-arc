@@ -15,6 +15,8 @@ Errand is an Arc-native autonomous commerce prototype for Circle's Agentic Econo
 
 The local demo uses real merchant EIP-712 signatures and clearly labeled simulated x402 and escrow settlement. Funded Arc Testnet payments and the Solidity escrow deployment remain the next production-facing slice.
 
+Set both `DEMO_MODE=false` and `NEXT_PUBLIC_DEMO_MODE=false` to route quote purchases through the protected merchant endpoints with `GatewayClient.pay()`. Real mode refuses to start unless the Gateway balance can cover the bounded research plan.
+
 ## Run locally
 
 Requirements: Node.js 22+ and pnpm 11.

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { DemoOrder, DemoOrderStatus } from "@errand/shared";
 
 const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:3001";
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 const formatUsdc = (microUsdc: string) =>
   (Number(microUsdc) / 1_000_000).toFixed(2);
 const nextStatus: Partial<Record<DemoOrderStatus, DemoOrderStatus>> = {
@@ -181,9 +182,11 @@ export function MerchantConsole() {
         </div>
       )}
       <div className="rounded-2xl border border-info/20 bg-info/5 p-4 text-xs leading-5 text-secondary">
-        <strong className="text-foreground">Demo transparency:</strong> quote
-        signatures are real; escrow references and x402 settlements are
-        simulated locally. Switch to funded Arc Testnet mode for onchain proof.
+        <strong className="text-foreground">Settlement transparency:</strong>{" "}
+        quote signatures are real; escrow references are simulated locally.
+        {demoMode
+          ? " x402 settlements are also simulated in the current mode."
+          : " x402 quote payments settle through Circle Gateway on Arc Testnet."}
       </div>
     </div>
   );

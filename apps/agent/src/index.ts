@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { z } from "zod";
 import { getGatewayClient } from "./gateway.js";
+import { isDemoMode } from "./payments.js";
 import {
   createTask,
   getTask,
@@ -23,7 +24,12 @@ app.use(
 );
 
 app.get("/health", (context) =>
-  context.json({ ok: true, service: "agent", chain: "arcTestnet" }),
+  context.json({
+    ok: true,
+    service: "agent",
+    chain: "arcTestnet",
+    mode: isDemoMode() ? "local_demo" : "arc_testnet",
+  }),
 );
 
 app.get("/wallet", async (context) => {
@@ -31,10 +37,22 @@ app.get("/wallet", async (context) => {
   const balances = await gateway.getBalances();
   return context.json({
     address: gateway.address,
+    mode: isDemoMode() ? "local_demo" : "arc_testnet",
     walletMicroUsdc: balances.wallet.balance.toString(),
+    walletUsdc: balances.wallet.formatted,
     gatewayAvailableMicroUsdc: balances.gateway.available.toString(),
+    gatewayAvailableUsdc: balances.gateway.formattedAvailable,
   });
 });
+
+app.get("/runtime", (context) =>
+  context.json({
+    mode: isDemoMode() ? "local_demo" : "arc_testnet",
+    chainId: 5_042_002,
+    quoteCostMicroUsdc: "500",
+    taskCapMicroUsdc: "10000",
+  }),
+);
 
 app.post("/tasks", async (context) => {
   const input = z

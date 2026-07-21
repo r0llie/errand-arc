@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import type { DemoTask, ShoppingOption } from "@errand/shared";
 
 const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:3001";
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const arcExplorerUrl = "https://testnet.arcscan.app";
 const suggestions = [
   "I am making meatballs for 4 people",
   "Sunday breakfast for 6 people",
@@ -143,8 +145,9 @@ export function ShopComposer() {
           </div>
         </div>
         <p className="mt-4 text-xs text-muted">
-          Demo mode signs every quote cryptographically and simulates the 0.0005
-          USDC x402 settlement. No testnet funds move.
+          {demoMode
+            ? "Demo mode signs every quote cryptographically and simulates the 0.0005 USDC x402 settlement. No testnet funds move."
+            : "Arc Testnet mode pays 0.0005 USDC per quote through Circle Gateway. Purchase escrow remains simulated."}
         </p>
       </section>
 
@@ -216,6 +219,44 @@ function TaskView({
             value={`${(researchSpend / 1_000_000).toFixed(4)} USDC`}
           />
         </div>
+        {task.payments.some((payment) => payment.mode === "gateway") && (
+          <div className="mt-4 space-y-2">
+            <p className="text-[10px] uppercase tracking-wider text-muted">
+              Gateway settlement evidence
+            </p>
+            {task.payments.map((payment) => {
+              const canLink = Boolean(
+                payment.transaction?.match(/^0x[0-9a-fA-F]{64}$/),
+              );
+              return (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between gap-3 text-xs"
+                >
+                  <span className="truncate text-secondary">
+                    {payment.merchantName}
+                  </span>
+                  {canLink ? (
+                    <a
+                      className="font-mono text-accent hover:underline"
+                      href={`${arcExplorerUrl}/tx/${payment.transaction}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {shortHash(payment.transaction!)}
+                    </a>
+                  ) : (
+                    <span className="font-mono text-muted">
+                      {payment.transaction
+                        ? shortHash(payment.transaction)
+                        : "settled"}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="space-y-4">
