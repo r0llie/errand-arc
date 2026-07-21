@@ -144,5 +144,9 @@ Errand now has a public monorepo, an English two-sided demo, deterministic merch
 - [ ] Record real fund → ready → pickup → release flow
 - [ ] Deploy public HTTPS services
 - [ ] Record three-minute pitch/demo video
-- [ ] Create final deck
+- [x] Create final English deck
 - [ ] Submit final project before the deadline
+
+Deck: `outputs/errand-build-on-arc-pitch.pptx`
+
+Recording script: `docs/10-DEMO-VIDEO-SCRIPT.md`

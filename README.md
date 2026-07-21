@@ -92,3 +92,5 @@ pnpm build
 Private keys, service-role keys, and recovery material must stay server-side and must never be committed. See `docs/08-ARC-AGENTIC-IMPLEMENTATION.md` for the product and protocol source of truth.
 
 See `docs/09-HACKATHON-SUBMISSION.md` for the judge-facing architecture, proof ledger, demo script, and submission checklist.
+
+The editable English pitch deck is at `outputs/errand-build-on-arc-pitch.pptx`; the timed recording script is at `docs/10-DEMO-VIDEO-SCRIPT.md`.
