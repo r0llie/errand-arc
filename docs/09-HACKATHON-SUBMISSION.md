@@ -152,7 +152,7 @@ Errand now has a public monorepo, an English two-sided demo, deterministic merch
 - [x] Keep pickup code and salt out of merchant/server responses
 - [x] Record real fund → ready → pickup → release flow
 - [x] Deploy public HTTPS judge portal
-- [ ] Deploy stateful public agent and merchant APIs
+- [x] Deploy shared stateful buyer/merchant judge session API
 - [ ] Record three-minute pitch/demo video
 - [x] Create final English deck
 - [ ] Submit final project before the deadline
@@ -160,3 +160,5 @@ Errand now has a public monorepo, an English two-sided demo, deterministic merch
 Deck: `outputs/errand-build-on-arc-pitch.pptx`
 
 Recording script: `docs/10-DEMO-VIDEO-SCRIPT.md`
+
+Post-hackathon infrastructure: move the live agent and merchant service processes to persistent hosted compute. The public judge workflow already synchronizes both sides through the hosted session API while replaying the recorded, verifiable Arc lifecycle without new spend.

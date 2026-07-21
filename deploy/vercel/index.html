@@ -886,6 +886,7 @@
             ><button data-view="merchant">Merchant</button>
           </nav>
           <div class="top-meta">
+            <span class="pill" id="sync-badge">Connecting session</span>
             <span class="pill budget">Policy &middot; 0.0100 USDC</span
             ><span class="pill wallet">0xDD2E...6138</span
             ><span class="pill"
@@ -1199,7 +1200,25 @@ I am making meatballs for 4 people</textarea>
         phase: 0,
         view: "shopper",
         intent: "I am making meatballs for 4 people",
+        revision: 0,
       };
+      const requestedSession = new URLSearchParams(location.search).get(
+        "session",
+      );
+      const sessionId = /^[a-z0-9-]{1,48}$/i.test(requestedSession || "")
+        ? requestedSession.toLowerCase()
+        : "public";
+      const actionTargets = {
+        start: 1,
+        research: 2,
+        plans: 3,
+        fund: 4,
+        preparing: 5,
+        ready: 6,
+        release: 7,
+      };
+      let serverReady = false;
+      let syncing = false;
       let state = readState();
       function readState() {
         try {
@@ -1214,6 +1233,96 @@ I am making meatballs for 4 people</textarea>
       function save() {
         localStorage.setItem("errand-verified-app", JSON.stringify(state));
         render();
+      }
+      function setSyncStatus(label, online) {
+        const badge = document.querySelector("#sync-badge");
+        badge.textContent = label;
+        badge.style.color = online ? "var(--green)" : "var(--muted)";
+      }
+      function requestId() {
+        return `web_${crypto.randomUUID().replaceAll("-", "")}`;
+      }
+      async function syncSession({ quiet = true } = {}) {
+        if (syncing) return;
+        syncing = true;
+        if (!quiet) setSyncStatus("Syncing session", false);
+        try {
+          const response = await fetch(
+            `/api/session?session=${encodeURIComponent(sessionId)}`,
+            { cache: "no-store" },
+          );
+          if (!response.ok) throw new Error("Session API unavailable");
+          const payload = await response.json();
+          const next = {
+            ...defaultState,
+            ...payload.state,
+            view: state.view,
+          };
+          const changed =
+            next.phase !== state.phase ||
+            next.revision !== state.revision ||
+            next.intent !== state.intent;
+          state = next;
+          serverReady = true;
+          if (changed) save();
+          setSyncStatus(`Shared · ${sessionId}`, true);
+        } catch {
+          serverReady = false;
+          setSyncStatus("Local fallback", false);
+          if (!quiet)
+            showToast("Shared session unavailable · local replay active");
+        } finally {
+          syncing = false;
+        }
+      }
+      function applyLocalAction(action, intent) {
+        if (action === "reset") {
+          state = { ...defaultState, view: state.view };
+          return;
+        }
+        const target = actionTargets[action];
+        if (target && state.phase === target - 1) {
+          state.phase = target;
+          state.revision = (state.revision || 0) + 1;
+          if (action === "start") state.intent = intent;
+        }
+      }
+      async function runAction(action, message, intent = state.intent) {
+        const previous = { ...state };
+        try {
+          const response = await fetch(
+            `/api/session?session=${encodeURIComponent(sessionId)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action,
+                intent,
+                expectedRevision: state.revision || 0,
+                requestId: requestId(),
+              }),
+            },
+          );
+          const payload = await response.json();
+          if (!response.ok)
+            throw new Error(payload.error || "Session update failed");
+          state = { ...defaultState, ...payload.state, view: previous.view };
+          serverReady = true;
+          save();
+          setSyncStatus(`Shared · ${sessionId}`, true);
+          showToast(message);
+        } catch (error) {
+          if (serverReady) {
+            await syncSession({ quiet: true });
+            showToast(error.message || "Session changed in another window");
+            return;
+          }
+          state = previous;
+          applyLocalAction(action, intent);
+          save();
+          setSyncStatus("Local fallback", false);
+          showToast(`${message} · local fallback`);
+        }
       }
       function short(value) {
         return value.slice(0, 8) + "..." + value.slice(-6);
@@ -1301,7 +1410,10 @@ I am making meatballs for 4 people</textarea>
         ];
         const visible = entries.slice(
           0,
-          Math.min(entries.length, state.phase + (state.phase > 2 ? 1 : 0)),
+          Math.min(
+            entries.length,
+            state.phase + (state.phase >= 7 ? 2 : state.phase > 2 ? 1 : 0),
+          ),
         );
         return `<div class="feed">${visible.map((e, i) => `<div class="feed-item"><span class="feed-dot ${e.k}"></span><div><strong>${e.t}</strong><p>${e.d}</p></div><span class="feed-time">${String(i + 1).padStart(2, "0")}</span></div>`).join("")}</div>`;
       }
@@ -1381,8 +1493,14 @@ I am making meatballs for 4 people</textarea>
           ? "Meatballs for 4"
           : "New shopping task";
         document.querySelector("#rail-task-id").textContent = state.phase
-          ? "TASK 7F31A9C2 · VERIFIED REPLAY"
+          ? `SESSION ${sessionId.toUpperCase()} · SHARED REPLAY`
           : "No task created";
+        const intentField = document.querySelector("#intent");
+        if (
+          document.activeElement !== intentField &&
+          intentField.value !== state.intent
+        )
+          intentField.value = state.intent;
         document.querySelector("#agent-badge").textContent =
           state.phase >= 7 ? "Completed" : state.phase ? "Active" : "Ready";
         document.querySelector("#research-badge").textContent =
@@ -1412,32 +1530,34 @@ I am making meatballs for 4 people</textarea>
       function bindDynamic() {
         document
           .querySelector("#run-research")
-          ?.addEventListener("click", () => {
-            state.phase = 2;
-            save();
-            showToast("5 paid quotes verified · 0.0025 USDC settled");
-          });
+          ?.addEventListener("click", () =>
+            runAction(
+              "research",
+              "5 paid quotes verified · 0.0025 USDC settled",
+            ),
+          );
         document
           .querySelector("#build-plans")
-          ?.addEventListener("click", () => {
-            state.phase = 3;
-            save();
-            showToast("3 deterministic plans built");
-          });
+          ?.addEventListener("click", () =>
+            runAction("plans", "3 deterministic plans built"),
+          );
         document
           .querySelector("#select-plan")
-          ?.addEventListener("click", () => {
-            state.phase = 4;
-            save();
-            showToast("Recorded 1.5 USDC escrow funding loaded");
-          });
+          ?.addEventListener("click", () =>
+            runAction("fund", "Recorded 1.5 USDC escrow funding loaded"),
+          );
         document
           .querySelector("#advance-order")
           ?.addEventListener("click", () => {
-            state.phase = Math.min(7, state.phase + 1);
-            save();
-            showToast(
-              state.phase === 7
+            const action =
+              state.phase === 4
+                ? "preparing"
+                : state.phase === 5
+                  ? "ready"
+                  : "release";
+            return runAction(
+              action,
+              action === "release"
                 ? "Pickup verified · 1.5 USDC released"
                 : "Onchain merchant status updated",
             );
@@ -1449,16 +1569,14 @@ I am making meatballs for 4 people</textarea>
           el.addEventListener("click", () => setView(el.dataset.view)),
         );
       document.querySelector("#start-task").addEventListener("click", () => {
-        state.intent = document.querySelector("#intent").value.trim();
-        state.phase = 1;
-        save();
-        showToast("Intent parsed into 8 deterministic SKUs");
+        const intent = document.querySelector("#intent").value.trim();
+        runAction("start", "Intent parsed into 8 deterministic SKUs", intent);
       });
-      document.querySelector("#reset").addEventListener("click", () => {
-        state = { ...defaultState };
-        save();
-        showToast("Verified replay reset");
-      });
+      document
+        .querySelector("#reset")
+        .addEventListener("click", () =>
+          runAction("reset", "Verified replay reset"),
+        );
       const drawer = document.querySelector("#proof-drawer");
       function openProof() {
         drawer.classList.add("open");
@@ -1482,10 +1600,16 @@ I am making meatballs for 4 people</textarea>
         if (e.key === "Escape") closeProof();
       });
       window.addEventListener("storage", () => {
+        if (serverReady) return;
         state = readState();
         render();
       });
       render();
+      syncSession({ quiet: false });
+      setInterval(() => syncSession({ quiet: true }), 1200);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) syncSession({ quiet: true });
+      });
     </script>
   </body>
 </html>

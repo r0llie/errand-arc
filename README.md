@@ -97,4 +97,6 @@ The editable English pitch deck is at `outputs/errand-build-on-arc-pitch.pptx`; 
 
 Public judge portal: https://errand-arc.vercel.app
 
-The public console is a no-wallet, two-sided verified Testnet app. Judges manually run merchant research, inspect signal scores and the budget ledger, select a plan, switch to the merchant workspace, and advance the recorded escrow lifecycle through USDC release. Every paid quote and lifecycle state is linked to its real Arc Testnet proof. The stateful service-backed shopper and merchant application remains available locally.
+The public console is a no-wallet, two-sided verified Testnet app. Judges manually run merchant research, inspect signal scores and the budget ledger, select a plan, switch to the merchant workspace, and advance the recorded escrow lifecycle through USDC release. Every paid quote and lifecycle state is linked to its real Arc Testnet proof.
+
+The hosted judge app now uses a validated, idempotent shared-session API backed by Vercel Runtime Cache. Open the same URL in two browsers, for example `https://errand-arc.vercel.app/?session=judge-room`: shopper actions appear in the merchant workspace and merchant fulfillment appears back in the shopper timeline. The session replay never sends a new onchain transaction. The fully service-backed agent and merchant application remains available locally for live integrations.
