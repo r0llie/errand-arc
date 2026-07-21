@@ -1,0 +1,36 @@
+export const SKU_REGISTRY = {
+  BEEF_GROUND: { name: "Ground beef", unit: "kg", category: "butcher" },
+  BEEF_STEAK: { name: "Beef steak", unit: "kg", category: "butcher" },
+  LAMB_CHOP: { name: "Lamb chops", unit: "kg", category: "butcher" },
+  CHICKEN_WHOLE: { name: "Whole chicken", unit: "piece", category: "butcher" },
+  CHICKEN_BREAST: { name: "Chicken breast", unit: "kg", category: "butcher" },
+  EGGS_12: { name: "Free-range eggs", unit: "dozen", category: "market" },
+  ONION: { name: "Onion", unit: "kg", category: "greengrocer" },
+  TOMATO: { name: "Tomato", unit: "kg", category: "greengrocer" },
+  PEPPER_GREEN: { name: "Green pepper", unit: "kg", category: "greengrocer" },
+  PEPPER_RED: { name: "Red pepper", unit: "kg", category: "greengrocer" },
+  GARLIC: { name: "Garlic", unit: "kg", category: "greengrocer" },
+  PARSLEY: { name: "Parsley", unit: "bunch", category: "greengrocer" },
+  POTATO: { name: "Potato", unit: "kg", category: "greengrocer" },
+  EGGPLANT: { name: "Eggplant", unit: "kg", category: "greengrocer" },
+  LEMON: { name: "Lemon", unit: "kg", category: "greengrocer" },
+  BREAD_WHITE: { name: "White bread", unit: "loaf", category: "bakery" },
+  BREAD_WHOLE: { name: "Whole wheat bread", unit: "loaf", category: "bakery" },
+  PIDE: { name: "Pide bread", unit: "piece", category: "bakery" },
+  SIMIT: { name: "Simit", unit: "piece", category: "bakery" },
+  FLATBREAD: { name: "Flatbread", unit: "pack", category: "bakery" },
+  OIL_SUNFLOWER: { name: "Sunflower oil", unit: "litre", category: "market" },
+  OIL_OLIVE: { name: "Olive oil", unit: "litre", category: "market" },
+  SALT: { name: "Salt", unit: "kg", category: "market" },
+  PEPPER_BLACK: { name: "Black pepper", unit: "pack", category: "market" },
+  CUMIN: { name: "Cumin", unit: "pack", category: "market" },
+  PAPRIKA: { name: "Paprika", unit: "pack", category: "market" },
+  RICE: { name: "Rice", unit: "kg", category: "market" },
+  PASTA: { name: "Pasta", unit: "pack", category: "market" },
+  TOMATO_PASTE: { name: "Tomato paste", unit: "jar", category: "market" },
+  CHARCOAL: { name: "Charcoal", unit: "kg", category: "market" },
+} as const;
+
+export type Sku = keyof typeof SKU_REGISTRY;
+
+export const SKU_KEYS = Object.keys(SKU_REGISTRY) as [Sku, ...Sku[]];

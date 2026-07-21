@@ -1,0 +1,29 @@
+{
+  "name": "@errand/merchant-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@circle-fin/x402-batching": "3.2.0",
+    "@errand/shared": "workspace:*",
+    "@x402/evm": "2.19.0",
+    "cors": "2.8.6",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "viem": "2.55.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

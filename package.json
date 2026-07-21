@@ -1,0 +1,28 @@
+{
+  "name": "errand",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "demo:wallets": "tsx scripts/generate-demo-wallets.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "prettier": "3.9.6",
+    "turbo": "2.10.5",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "viem": "2.55.4",
+    "vitest": "4.1.10"
+  }
+}
