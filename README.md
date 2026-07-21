@@ -97,4 +97,4 @@ The editable English pitch deck is at `outputs/errand-build-on-arc-pitch.pptx`; 
 
 Public judge portal: https://errand-arc.vercel.app
 
-The portal is a no-wallet interactive replay backed by the recorded Arc Testnet evidence. The full shopper and merchant application remains available locally for the live two-sided demo.
+The public console is a no-wallet, two-sided verified Testnet app. Judges manually run merchant research, inspect signal scores and the budget ledger, select a plan, switch to the merchant workspace, and advance the recorded escrow lifecycle through USDC release. Every paid quote and lifecycle state is linked to its real Arc Testnet proof. The stateful service-backed shopper and merchant application remains available locally.

@@ -48,23 +48,24 @@ Selected basket: shopper wallet → OrderEscrow → merchant on pickup
 
 ## Verified evidence ledger
 
-| Evidence                                 | Status                         | Proof                                                                   |
-| ---------------------------------------- | ------------------------------ | ----------------------------------------------------------------------- |
-| Agent wallet funded                      | Verified                       | `0xDD2E55714966c9093483d769847Dda5b4a956138`                            |
-| Gateway deposit                          | Verified                       | `0x7baebfaeb9a5ce463d83e4c8a4bf503d333ccb5741ddf464c09f0ac0a55887f7`    |
-| Gateway approval                         | Verified                       | `0xea13ec3ad1902059f7181976353eada09880b2f021f57c5646ac7f3467992b42`    |
-| Gateway balance before paid run          | Verified                       | `1 USDC`                                                                |
-| Gateway balance after approved paid run  | Verified                       | `0.9975 USDC` — exactly `0.0025 USDC` spent                             |
-| Two merchant endpoints return unpaid 402 | Verified locally               | Arc `eip155:5042002`, `500` micro-USDC, distinct payees                 |
-| Full two-sided local browser loop        | Verified                       | 5 quote receipts, 3 plans, 4 orders, all completed, no console errors   |
-| Escrow security tests                    | Verified locally               | 5/5 Hardhat tests passing                                               |
-| Real x402 seller/buyer round trips       | Verified for Ali, Can, and Cem | Three signed quotes, recovered EIP-712 signers, and seller receipt IDs  |
-| First two paid-call failure diagnosis    | Fixed and regression-tested    | Duplicate-case Content-Type caused Express to receive an undefined body |
-| OrderEscrow Arc deployment               | Verified                       | `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`                            |
-| Can Butcher transaction-gas funding      | Verified                       | Exactly `0.1 USDC`; recipient balance `0 → 0.1`                         |
-| Browser wallet escrow integration        | Implemented and tested locally | Arc chain/account checks, approve, fund, merchant lifecycle, event sync |
-| Escrow lifecycle transaction preview     | Verified read-only             | 1.5 USDC principal; maximum 0.02 USDC gas; fixed unused order ID        |
-| Real escrow fund/release                 | Verified                       | 1.5 USDC released to Can Butcher after valid pickup proof               |
+| Evidence                                 | Status                         | Proof                                                                     |
+| ---------------------------------------- | ------------------------------ | ------------------------------------------------------------------------- |
+| Agent wallet funded                      | Verified                       | `0xDD2E55714966c9093483d769847Dda5b4a956138`                              |
+| Gateway deposit                          | Verified                       | `0x7baebfaeb9a5ce463d83e4c8a4bf503d333ccb5741ddf464c09f0ac0a55887f7`      |
+| Gateway approval                         | Verified                       | `0xea13ec3ad1902059f7181976353eada09880b2f021f57c5646ac7f3467992b42`      |
+| Gateway balance before paid run          | Verified                       | `1 USDC`                                                                  |
+| Gateway balance after approved paid run  | Verified                       | `0.9975 USDC` — exactly `0.0025 USDC` spent                               |
+| Two merchant endpoints return unpaid 402 | Verified locally               | Arc `eip155:5042002`, `500` micro-USDC, distinct payees                   |
+| Full two-sided local browser loop        | Verified                       | 5 quote receipts, 3 plans, 4 orders, all completed, no console errors     |
+| Escrow security tests                    | Verified locally               | 5/5 Hardhat tests passing                                                 |
+| Real x402 seller/buyer round trips       | Verified for Ali, Can, and Cem | Three signed quotes, recovered EIP-712 signers, and seller receipt IDs    |
+| First two paid-call failure diagnosis    | Fixed and regression-tested    | Duplicate-case Content-Type caused Express to receive an undefined body   |
+| OrderEscrow Arc deployment               | Verified                       | `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`                              |
+| Can Butcher transaction-gas funding      | Verified                       | Exactly `0.1 USDC`; recipient balance `0 → 0.1`                           |
+| Browser wallet escrow integration        | Implemented and tested locally | Arc chain/account checks, approve, fund, merchant lifecycle, event sync   |
+| Escrow lifecycle transaction preview     | Verified read-only             | 1.5 USDC principal; maximum 0.02 USDC gas; fixed unused order ID          |
+| Real escrow fund/release                 | Verified                       | 1.5 USDC released to Can Butcher after valid pickup proof                 |
+| Public two-sided product console         | Verified in production         | Manual shopper research, plan selection, merchant lifecycle, proof drawer |
 
 Explorer links:
 
