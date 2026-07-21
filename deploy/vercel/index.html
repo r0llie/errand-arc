@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Errand &mdash; Autonomous Local Commerce on Arc</title>
+    <meta
+      name="description"
+      content="Errand is an Arc-native commerce agent that pays for trusted merchant data and settles pickup orders in USDC."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080a0e;
+        --panel: #10141b;
+        --line: #242b36;
+        --muted: #8d99aa;
+        --text: #f4f7fb;
+        --accent: #66e3b4;
+        --accent-soft: rgba(102, 227, 180, 0.12);
+        --blue: #78a9ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at 80% -10%,
+            rgba(50, 112, 255, 0.16),
+            transparent 34rem
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      a {
+        color: inherit;
+      }
+      .shell {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 26px 0;
+      }
+      .brand {
+        font-size: 15px;
+        font-weight: 760;
+        letter-spacing: 0.16em;
+      }
+      .network {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 12px;
+        color: var(--muted);
+        font:
+          12px ui-monospace,
+          monospace;
+      }
+      .dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-right: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 16px var(--accent);
+      }
+      .hero {
+        padding: 76px 0 54px;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font:
+          12px ui-monospace,
+          monospace;
+        letter-spacing: 0.13em;
+      }
+      h1 {
+        max-width: 900px;
+        margin: 18px 0 22px;
+        font-size: clamp(48px, 8vw, 92px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+      .lead {
+        max-width: 720px;
+        color: #b9c2d0;
+        font-size: clamp(18px, 2.5vw, 24px);
+        line-height: 1.5;
+      }
+      .proofs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .proof {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.025);
+        padding: 10px 13px;
+        border-radius: 12px;
+        color: #cdd5e0;
+        font:
+          12px ui-monospace,
+          monospace;
+        text-decoration: none;
+      }
+      .proof:hover {
+        border-color: var(--accent);
+      }
+      .section-title {
+        margin: 0 0 18px;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .demo {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        padding: 34px 0 72px;
+      }
+      .panel {
+        min-width: 0;
+        min-height: 560px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(16, 20, 27, 0.9);
+        padding: 22px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+      }
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+      .panel h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .badge {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font:
+          11px ui-monospace,
+          monospace;
+        text-transform: uppercase;
+      }
+      .prompt {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #0b0e13;
+        color: var(--text);
+        padding: 16px;
+        font: inherit;
+        font-size: 16px;
+      }
+      button {
+        margin-top: 12px;
+        border: 0;
+        border-radius: 13px;
+        background: var(--accent);
+        color: #04110c;
+        padding: 12px 16px;
+        font: 700 13px inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: progress;
+      }
+      .timeline {
+        margin-top: 18px;
+        display: grid;
+        gap: 10px;
+      }
+      .event,
+      .receipt,
+      .order {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #0b0e13;
+        padding: 13px 14px;
+      }
+      .event {
+        display: grid;
+        grid-template-columns: 25px 1fr;
+        gap: 10px;
+        opacity: 0.35;
+        transform: translateY(4px);
+        transition: 0.35s ease;
+      }
+      .event.live {
+        opacity: 1;
+        transform: none;
+      }
+      .check {
+        color: var(--accent);
+        font-weight: 800;
+      }
+      .event strong,
+      .receipt strong,
+      .order strong {
+        display: block;
+        font-size: 13px;
+      }
+      .event span,
+      .receipt span,
+      .order span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+      }
+      .metric b {
+        display: block;
+        font:
+          15px ui-monospace,
+          monospace;
+      }
+      .metric small {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+      }
+      .receipt + .receipt,
+      .order {
+        margin-top: 10px;
+      }
+      .receipt code {
+        color: var(--blue);
+        overflow-wrap: anywhere;
+      }
+      .progress {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 12px;
+      }
+      .step {
+        flex: 1;
+        height: 4px;
+        border-radius: 10px;
+        background: var(--line);
+        transition: 0.3s;
+      }
+      .step.done {
+        background: var(--accent);
+      }
+      .evidence {
+        border-top: 1px solid var(--line);
+        padding: 62px 0 76px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .stat {
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+      }
+      .stat b {
+        font-size: 34px;
+        letter-spacing: -0.04em;
+      }
+      .stat p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        border-top: 1px solid var(--line);
+        padding: 28px 0 42px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      @media (max-width: 800px) {
+        .demo,
+        .stats {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          padding-top: 46px;
+        }
+        h1 {
+          font-size: 42px;
+          overflow-wrap: anywhere;
+        }
+        header {
+          gap: 10px;
+        }
+        .network {
+          padding: 7px 8px;
+          font-size: 9px;
+          white-space: nowrap;
+        }
+        .panel-head {
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .badge {
+          max-width: 46%;
+          text-align: right;
+        }
+        .panel {
+          min-height: auto;
+        }
+        footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">ERRAND</div>
+        <div class="network">
+          <span class="dot"></span>ARC TESTNET &middot; 5042002
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="eyebrow">BUILD ON ARC &middot; AGENTIC ECONOMY</div>
+          <h1>Agents can buy locally. Now they can prove it.</h1>
+          <p class="lead">
+            Errand pays merchants for trusted inventory, chooses under an
+            explicit spending policy, and settles pickup orders in USDC through
+            Arc escrow.
+          </p>
+          <div class="proofs">
+            <a
+              class="proof"
+              href="https://github.com/r0llie/errand-arc"
+              target="_blank"
+              rel="noreferrer"
+              >PUBLIC REPOSITORY &nearr;</a
+            >
+            <a
+              class="proof"
+              href="https://testnet.arcscan.app/address/0x40a97F02cBA40C9DcB6fc6845384C65FFA971749"
+              target="_blank"
+              rel="noreferrer"
+              >ORDERESCROW &nearr;</a
+            >
+            <a
+              class="proof"
+              href="https://testnet.arcscan.app/tx/0x6ebd7300d711320703553e1488f4071264cd2995980745586a20c2b447a5b4c8"
+              target="_blank"
+              rel="noreferrer"
+              >PICKUP RELEASE &nearr;</a
+            >
+          </div>
+        </section>
+
+        <p class="section-title">Interactive verified-flow replay</p>
+        <section class="demo">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Shopper agent</h2>
+              <span class="badge" id="agent-status">Ready</span>
+            </div>
+            <input
+              class="prompt"
+              value="I am making meatballs for 4 people"
+              aria-label="Shopping intent"
+            />
+            <button id="run">Run autonomous task &rarr;</button>
+            <div class="timeline">
+              <div class="event" data-event>
+                <div class="check">&#10003;</div>
+                <div>
+                  <strong>Intent parsed</strong
+                  ><span>8 deterministic SKUs and quantities generated.</span>
+                </div>
+              </div>
+              <div class="event" data-event>
+                <div class="check">&#10003;</div>
+                <div>
+                  <strong>Merchants ranked</strong
+                  ><span
+                    >Coverage 45% &middot; quality 25% &middot; distance 20%
+                    &middot; negotiability 10%.</span
+                  >
+                </div>
+              </div>
+              <div class="event" data-event>
+                <div class="check">&#9670;</div>
+                <div>
+                  <strong>Paid research settled</strong
+                  ><span
+                    >Five x402 quote calls &middot; 0.0005 USDC each &middot;
+                    strict 0.01 USDC cap.</span
+                  >
+                </div>
+              </div>
+              <div class="event" data-event>
+                <div class="check">&#10003;</div>
+                <div>
+                  <strong>Signed quotes verified</strong
+                  ><span
+                    >EIP-712 signer, basket hash, total, nonce, and expiry
+                    checked.</span
+                  >
+                </div>
+              </div>
+              <div class="event" data-event>
+                <div class="check">&#10003;</div>
+                <div>
+                  <strong>Order completed on Arc</strong
+                  ><span>1.5 USDC released only after valid pickup proof.</span>
+                </div>
+              </div>
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <b>0.0025</b><small>USDC research</small>
+              </div>
+              <div class="metric"><b>5</b><small>merchant calls</small></div>
+              <div class="metric"><b>1.5</b><small>USDC released</small></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Merchant console</h2>
+              <span class="badge">Verified evidence</span>
+            </div>
+            <div class="receipt">
+              <strong>Gateway receipt &middot; Can Butcher</strong
+              ><span
+                ><code>6e32621d-c6dc-4dd8-87e8-013ded590920</code><br />500
+                micro-USDC &middot; eip155:5042002</span
+              >
+            </div>
+            <div class="receipt">
+              <strong>Gateway receipt &middot; Ali Butcher</strong
+              ><span
+                ><code>aa2f60d7-2157-450b-88b7-7437643a843f</code><br />500
+                micro-USDC &middot; eip155:5042002</span
+              >
+            </div>
+            <div class="receipt">
+              <strong>Gateway receipt &middot; Cem Bakery</strong
+              ><span
+                ><code>48912613-f2bf-481c-a162-45b47da36841</code><br />500
+                micro-USDC &middot; eip155:5042002</span
+              >
+            </div>
+            <div class="order">
+              <strong>Can Butcher &middot; 1.5 USDC</strong>
+              <span id="order-copy">Awaiting verified replay</span>
+              <div class="progress">
+                <i class="step"></i><i class="step"></i><i class="step"></i
+                ><i class="step"></i>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="evidence">
+          <p class="section-title">What is verified today</p>
+          <div class="stats">
+            <div class="stat">
+              <b>23 / 23</b>
+              <p>Automated tests passing</p>
+            </div>
+            <div class="stat">
+              <b>0.00756</b>
+              <p>USDC actual lifecycle gas</p>
+            </div>
+            <div class="stat">
+              <b>5 / 5</b>
+              <p>Successful escrow transactions</p>
+            </div>
+            <div class="stat">
+              <b>&lt; 1s</b>
+              <p>Arc-native settlement target</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>Errand &middot; Arc-native autonomous commerce</span
+        ><span
+          >Interactive replay uses recorded Testnet evidence and never requests
+          a wallet signature.</span
+        >
+      </footer>
+    </div>
+    <script>
+      const button = document.querySelector("#run");
+      const status = document.querySelector("#agent-status");
+      const events = [...document.querySelectorAll("[data-event]")];
+      const steps = [...document.querySelectorAll(".step")];
+      const orderCopy = document.querySelector("#order-copy");
+      const labels = [
+        "Funded on Arc",
+        "Preparing",
+        "Ready for pickup",
+        "Completed \u00b7 USDC released",
+      ];
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        status.textContent = "Running";
+        events.forEach((event) => event.classList.remove("live"));
+        steps.forEach((step) => step.classList.remove("done"));
+        orderCopy.textContent = "Awaiting agent decision";
+        for (let index = 0; index < events.length; index += 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, index === 0 ? 180 : 520),
+          );
+          events[index].classList.add("live");
+          if (index > 0 && index - 1 < steps.length) {
+            steps[index - 1].classList.add("done");
+            orderCopy.textContent = labels[index - 1];
+          }
+        }
+        status.textContent = "Completed";
+        button.textContent = "Replay completed flow \u21bb";
+        button.disabled = false;
+      });
+    </script>
+  </body>
+</html>

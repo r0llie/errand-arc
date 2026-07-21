@@ -40,4 +40,4 @@ Open the deployed contract and the final lifecycle transaction on Arcscan.
 
 “Errand starts with local pickup procurement, then becomes an agent-commerce layer for delivery, mobility, field service, and B2B purchasing. Operators can embed the SDK and pay SaaS plus per-agent transaction fees. Agents can buy locally. Now they can prove it.”
 
-End on slide 8 with the public repository and live demo URLs visible in the video description.
+End on slide 8 with the public repository and `https://errand-arc.vercel.app` visible in the video description.

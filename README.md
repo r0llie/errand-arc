@@ -17,7 +17,7 @@ Errand is an Arc-native autonomous commerce agent for Circle's Agentic Economy t
 - secure Supabase schema with budget reservation and settlement functions
 - unit tests for money, distance, quote totals, and signature recovery
 
-The local demo uses real merchant EIP-712 signatures and clearly labels simulated x402 and escrow settlement. Real mode uses the funded Gateway balance and protected merchant endpoints. `OrderEscrow` is deployed on Arc Testnet at `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`; the evidence ledger records the deployment, paid x402 proof run, and merchant gas funding.
+The local demo uses real merchant EIP-712 signatures and clearly labels simulated x402 and escrow settlement. Real mode uses the funded Gateway balance and protected merchant endpoints. `OrderEscrow` is deployed on Arc Testnet at `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`; the evidence ledger records the deployment, paid x402 proof run, merchant gas funding, and a completed 1.5 USDC fund-to-pickup lifecycle.
 
 Set both `DEMO_MODE=false` and `NEXT_PUBLIC_DEMO_MODE=false` to route quote purchases through the protected merchant endpoints with `GatewayClient.pay()`. Real mode refuses to start unless the Gateway balance can cover the bounded research plan.
 
@@ -94,3 +94,7 @@ Private keys, service-role keys, and recovery material must stay server-side and
 See `docs/09-HACKATHON-SUBMISSION.md` for the judge-facing architecture, proof ledger, demo script, and submission checklist.
 
 The editable English pitch deck is at `outputs/errand-build-on-arc-pitch.pptx`; the timed recording script is at `docs/10-DEMO-VIDEO-SCRIPT.md`.
+
+Public judge portal: https://errand-arc.vercel.app
+
+The portal is a no-wallet interactive replay backed by the recorded Arc Testnet evidence. The full shopper and merchant application remains available locally for the live two-sided demo.

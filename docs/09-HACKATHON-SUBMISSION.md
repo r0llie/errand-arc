@@ -48,31 +48,39 @@ Selected basket: shopper wallet → OrderEscrow → merchant on pickup
 
 ## Verified evidence ledger
 
-| Evidence                                 | Status                                    | Proof                                                                   |
-| ---------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| Agent wallet funded                      | Verified                                  | `0xDD2E55714966c9093483d769847Dda5b4a956138`                            |
-| Gateway deposit                          | Verified                                  | `0x7baebfaeb9a5ce463d83e4c8a4bf503d333ccb5741ddf464c09f0ac0a55887f7`    |
-| Gateway approval                         | Verified                                  | `0xea13ec3ad1902059f7181976353eada09880b2f021f57c5646ac7f3467992b42`    |
-| Gateway balance before paid run          | Verified                                  | `1 USDC`                                                                |
-| Gateway balance after approved paid run  | Verified                                  | `0.9975 USDC` — exactly `0.0025 USDC` spent                             |
-| Two merchant endpoints return unpaid 402 | Verified locally                          | Arc `eip155:5042002`, `500` micro-USDC, distinct payees                 |
-| Full two-sided local browser loop        | Verified                                  | 5 quote receipts, 3 plans, 4 orders, all completed, no console errors   |
-| Escrow security tests                    | Verified locally                          | 5/5 Hardhat tests passing                                               |
-| Real x402 seller/buyer round trips       | Verified for Ali, Can, and Cem            | Three signed quotes, recovered EIP-712 signers, and seller receipt IDs  |
-| First two paid-call failure diagnosis    | Fixed and regression-tested               | Duplicate-case Content-Type caused Express to receive an undefined body |
-| OrderEscrow Arc deployment               | Verified                                  | `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`                            |
-| Can Butcher transaction-gas funding      | Verified                                  | Exactly `0.1 USDC`; recipient balance `0 → 0.1`                         |
-| Browser wallet escrow integration        | Implemented and tested locally            | Arc chain/account checks, approve, fund, merchant lifecycle, event sync |
-| Escrow lifecycle transaction preview     | Verified read-only                        | 1.5 USDC principal; maximum 0.02 USDC gas; fixed unused order ID        |
-| Real escrow fund/release                 | Pending explicit transaction confirmation | Add funding and release tx links here                                   |
+| Evidence                                 | Status                         | Proof                                                                   |
+| ---------------------------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| Agent wallet funded                      | Verified                       | `0xDD2E55714966c9093483d769847Dda5b4a956138`                            |
+| Gateway deposit                          | Verified                       | `0x7baebfaeb9a5ce463d83e4c8a4bf503d333ccb5741ddf464c09f0ac0a55887f7`    |
+| Gateway approval                         | Verified                       | `0xea13ec3ad1902059f7181976353eada09880b2f021f57c5646ac7f3467992b42`    |
+| Gateway balance before paid run          | Verified                       | `1 USDC`                                                                |
+| Gateway balance after approved paid run  | Verified                       | `0.9975 USDC` — exactly `0.0025 USDC` spent                             |
+| Two merchant endpoints return unpaid 402 | Verified locally               | Arc `eip155:5042002`, `500` micro-USDC, distinct payees                 |
+| Full two-sided local browser loop        | Verified                       | 5 quote receipts, 3 plans, 4 orders, all completed, no console errors   |
+| Escrow security tests                    | Verified locally               | 5/5 Hardhat tests passing                                               |
+| Real x402 seller/buyer round trips       | Verified for Ali, Can, and Cem | Three signed quotes, recovered EIP-712 signers, and seller receipt IDs  |
+| First two paid-call failure diagnosis    | Fixed and regression-tested    | Duplicate-case Content-Type caused Express to receive an undefined body |
+| OrderEscrow Arc deployment               | Verified                       | `0x40a97F02cBA40C9DcB6fc6845384C65FFA971749`                            |
+| Can Butcher transaction-gas funding      | Verified                       | Exactly `0.1 USDC`; recipient balance `0 → 0.1`                         |
+| Browser wallet escrow integration        | Implemented and tested locally | Arc chain/account checks, approve, fund, merchant lifecycle, event sync |
+| Escrow lifecycle transaction preview     | Verified read-only             | 1.5 USDC principal; maximum 0.02 USDC gas; fixed unused order ID        |
+| Real escrow fund/release                 | Verified                       | 1.5 USDC released to Can Butcher after valid pickup proof               |
 
 Explorer links:
 
+- Public judge portal: https://errand-arc.vercel.app
 - Gateway deposit: https://testnet.arcscan.app/tx/0x7baebfaeb9a5ce463d83e4c8a4bf503d333ccb5741ddf464c09f0ac0a55887f7
 - Gateway approval: https://testnet.arcscan.app/tx/0xea13ec3ad1902059f7181976353eada09880b2f021f57c5646ac7f3467992b42
 - OrderEscrow deployment: https://testnet.arcscan.app/tx/0x1683858658fd3530febe92265df526bf0daa155466bef4842282622f86597246
 - OrderEscrow contract: https://testnet.arcscan.app/address/0x40a97F02cBA40C9DcB6fc6845384C65FFA971749
 - Can Butcher gas funding: https://testnet.arcscan.app/tx/0x981efb71b9f30056099159be20b7c8de33416e9ad2cd39c8cd20b88c74904d73
+- Escrow USDC approval: https://testnet.arcscan.app/tx/0x4ea3a0bb3f88b8e89ff4ef0670ee6c2a1cf10a724b24739b0a7e9749d5fb6956
+- Escrow funding: https://testnet.arcscan.app/tx/0xa38f118d04986ff59721f0fad6068db2f77128b07fb54d880a859f3dcc8db1e1
+- Merchant preparing: https://testnet.arcscan.app/tx/0xe725c808b69c93834df0ff3458170f3b73fd73ff83c7970461fe4076e80152b9
+- Merchant ready: https://testnet.arcscan.app/tx/0xdb8eae7f966d632509c43d7d9b5bbb2173379f633043fa5aab7f2ef9f6ec37f0
+- Pickup and release: https://testnet.arcscan.app/tx/0x6ebd7300d711320703553e1488f4071264cd2995980745586a20c2b447a5b4c8
+
+The completed lifecycle used order ID `0xd435274dd4901f3c934b0077957def98e35b7a9f97f357770d5c0b209317b5df`. All five receipts succeeded. Actual combined gas was `0.007559916 USDC`, below the approved `0.02 USDC` maximum. The final contract status is `Completed` (`4`); Can Butcher's verified balance increased from `0.1` to `1.597269 USDC` after receiving the 1.5 USDC principal and paying its lifecycle gas.
 
 Successful Gateway settlement IDs from the corrected paid path:
 
@@ -124,7 +132,7 @@ The first Mini Market and Zeynep calls consumed the remaining `0.001 USDC` but t
 
 ## Checkpoint 2 progress summary
 
-Errand now has a public monorepo, an English two-sided demo, deterministic merchant selection from real signals, bounded/idempotent research spending, Circle Gateway x402 seller and buyer integrations, independently verified EIP-712 merchant quotes, live buyer/merchant payment evidence, and a tested Arc Testnet pickup escrow contract. The Gateway buyer completed the approved `0.0025 USDC` proof run, the corrected path returned three signed quotes, and the deployed escrow is ready for a recorded fund-to-release transaction.
+Errand now has a public monorepo, an English two-sided demo, deterministic merchant selection from real signals, bounded/idempotent research spending, Circle Gateway x402 seller and buyer integrations, independently verified EIP-712 merchant quotes, live buyer/merchant payment evidence, and a tested Arc Testnet pickup escrow contract. The Gateway buyer completed the approved `0.0025 USDC` proof run, the corrected path returned three signed quotes, and the deployed escrow completed a real 1.5 USDC fund-to-pickup release.
 
 ## Final submission checklist
 
@@ -141,8 +149,9 @@ Errand now has a public monorepo, an English two-sided demo, deterministic merch
 - [x] Connect shopper wallet to exact approval/funding calls
 - [x] Connect merchant wallet to preparation, ready, and pickup release calls
 - [x] Keep pickup code and salt out of merchant/server responses
-- [ ] Record real fund → ready → pickup → release flow
-- [ ] Deploy public HTTPS services
+- [x] Record real fund → ready → pickup → release flow
+- [x] Deploy public HTTPS judge portal
+- [ ] Deploy stateful public agent and merchant APIs
 - [ ] Record three-minute pitch/demo video
 - [x] Create final English deck
 - [ ] Submit final project before the deadline
