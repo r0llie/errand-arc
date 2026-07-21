@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "functions": {
+    "api/session.mjs": {
+      "maxDuration": 10
+    }
+  }
+}

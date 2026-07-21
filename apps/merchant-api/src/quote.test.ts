@@ -18,6 +18,7 @@ describe("merchant quote signing", () => {
       qualityScore: 9,
       canNegotiate: true,
       canReserve: false,
+      supportedSkus: ["BEEF_GROUND"],
       privateKey,
       products: [
         {

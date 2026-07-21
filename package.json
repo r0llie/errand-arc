@@ -9,11 +9,11 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "pnpm --filter @errand/shared build && turbo run dev",
     "demo:wallets": "tsx scripts/generate-demo-wallets.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "turbo run test",
+    "test": "turbo run test && npm --prefix deploy/vercel test",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

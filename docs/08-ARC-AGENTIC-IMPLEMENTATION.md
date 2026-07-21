@@ -274,7 +274,9 @@ inside `apps/agent`.
 - Never serialize JavaScript `bigint` directly.
 - Store task state transitions as append-only rows, not a mutable JSON array.
 - Persist SSE events before broadcasting so reconnecting clients can replay them.
-- Delivery-code plaintext is never stored; store only salted hashes and expiry.
+- Delivery-code plaintext never reaches server-side storage. In real mode the
+  shopper generates the code and salt in the browser, retains them only for the
+  browser session, and funds the contract with the domain-separated hash.
 - Service-role keys and wallet keys are server-only.
 
 ## SSE Reliability

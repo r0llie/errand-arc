@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShopComposer } from "./shop-composer";
 
 export default function ShopPage() {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/80 backdrop-blur">
@@ -29,11 +30,11 @@ export default function ShopPage() {
             </h1>
             <p className="mt-4 text-secondary">
               The local agent buys five signed quotes, compares three plans, and
-              sends funded demo orders to the merchant console.
+              sends verified orders to the merchant console.
             </p>
           </div>
           <span className="w-fit rounded-full border border-accent/25 bg-accent-soft px-3 py-2 font-mono text-[10px] text-accent">
-            LOCAL SIMULATION · ARC 5042002
+            {demoMode ? "LOCAL SIMULATION" : "REAL GATEWAY"} · ARC 5042002
           </span>
         </div>
         <ShopComposer />

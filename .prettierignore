@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+packages/contracts/artifacts/
+packages/contracts/cache/
+deploy/vercel/.vercel/
+deploy/vercel/.env*

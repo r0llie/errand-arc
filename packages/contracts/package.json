@@ -1,0 +1,28 @@
+{
+  "name": "@errand/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "hardhat compile",
+    "deploy:arc": "hardhat run scripts/deploy.ts --network arcTestnet",
+    "demo:preview": "tsx scripts/demo-lifecycle.ts",
+    "demo:execute": "tsx scripts/demo-lifecycle.ts --execute",
+    "test": "hardhat test nodejs",
+    "typecheck": "hardhat compile && tsc --noEmit"
+  },
+  "dependencies": {
+    "@errand/shared": "workspace:*",
+    "@openzeppelin/contracts": "5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-node-test-runner": "3.0.17",
+    "@nomicfoundation/hardhat-viem": "3.0.9",
+    "@types/node": "26.1.1",
+    "dotenv": "17.2.3",
+    "hardhat": "3.11.0",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "viem": "2.55.4"
+  }
+}

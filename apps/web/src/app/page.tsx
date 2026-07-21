@@ -24,6 +24,7 @@ const steps = [
 ] as const;
 
 export default function Home() {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="grid-glow" />
@@ -41,7 +42,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-2 text-xs text-muted sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_12px_var(--success)]" />
-            Local demo · Arc-ready
+            {demoMode ? "Local demo · Arc-ready" : "Arc Testnet · Gateway live"}
           </span>
           <Link href="/merchant" className="button-secondary">
             Merchant view

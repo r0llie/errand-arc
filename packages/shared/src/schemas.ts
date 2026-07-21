@@ -31,6 +31,7 @@ export const MerchantSchema = z.object({
   qualityScore: z.number().min(0).max(10),
   canNegotiate: z.boolean(),
   canReserve: z.boolean(),
+  supportedSkus: z.array(SkuSchema),
   distanceMeters: z.number().nonnegative().optional(),
 });
 

@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Errand Console — Autonomous Commerce on Arc</title>
+    <meta
+      name="description"
+      content="Run and inspect a verified autonomous shopping task settled in USDC on Arc."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080b12;
+        --surface: #0f1420;
+        --raised: #161d2a;
+        --line: #202938;
+        --soft: #171e2a;
+        --amber: #f5a524;
+        --amber2: #ffb83f;
+        --green: #33d69f;
+        --blue: #7c83ff;
+        --text: #f5f7fa;
+        --second: #a3adbd;
+        --muted: #687386;
+        --red: #ff6b6b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 14px;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button,
+      a {
+        transition: 0.18s ease;
+      }
+      a {
+        color: inherit;
+      }
+      .app {
+        min-height: 100vh;
+      }
+      .topbar {
+        height: 64px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 11, 18, 0.95);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      .topbar-inner {
+        max-width: 1440px;
+        height: 100%;
+        margin: auto;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+      .mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--amber);
+        color: #181006;
+        letter-spacing: 0;
+      }
+      .nav {
+        display: flex;
+        align-self: stretch;
+      }
+      .nav button {
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        padding: 0 16px;
+        cursor: pointer;
+      }
+      .nav button:hover,
+      .nav button.active {
+        color: var(--text);
+      }
+      .nav button.active {
+        border-bottom-color: var(--amber);
+      }
+      .top-meta {
+        margin-left: auto;
+        display: flex;
+        gap: 9px;
+        align-items: center;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        padding: 7px 10px;
+        color: var(--second);
+        font:
+          11px ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+        white-space: nowrap;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+      .layout {
+        max-width: 1440px;
+        margin: auto;
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        min-height: calc(100vh - 64px);
+      }
+      .rail {
+        border-right: 1px solid var(--line);
+        padding: 24px 18px;
+      }
+      .rail-title,
+      .kicker {
+        color: var(--muted);
+        font:
+          600 10px ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .task-card {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 15px;
+      }
+      .task-card strong {
+        font-size: 13px;
+      }
+      .task-card p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .stage-list {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .stage-list li {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        gap: 9px;
+        padding: 9px 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .stage-list .num {
+        width: 18px;
+        height: 18px;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font:
+          9px ui-monospace,
+          monospace;
+      }
+      .stage-list li.done {
+        color: var(--second);
+      }
+      .stage-list li.done .num {
+        border-color: rgba(51, 214, 159, 0.4);
+        background: rgba(51, 214, 159, 0.1);
+        color: var(--green);
+      }
+      .stage-list li.current {
+        color: var(--text);
+      }
+      .stage-list li.current .num {
+        border-color: var(--amber);
+        background: rgba(245, 165, 36, 0.12);
+        color: var(--amber);
+      }
+      .rail-actions {
+        margin-top: 24px;
+        display: grid;
+        gap: 8px;
+      }
+      .text-button {
+        border: 0;
+        background: none;
+        color: var(--muted);
+        padding: 8px 2px;
+        text-align: left;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .text-button:hover {
+        color: var(--text);
+      }
+      .workspace {
+        min-width: 0;
+        padding: 28px 32px 64px;
+      }
+      .page-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 22px;
+      }
+      .page-head h1 {
+        margin: 6px 0 0;
+        font-size: 26px;
+        letter-spacing: -0.03em;
+      }
+      .page-head p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .proof-button {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 13px;
+        cursor: pointer;
+      }
+      .proof-button:hover {
+        border-color: #354155;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(410px, 1.25fr);
+        gap: 16px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+        min-width: 0;
+      }
+      .panel-pad {
+        padding: 20px;
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 17px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel-head h2 {
+        margin: 0;
+        font-size: 14px;
+      }
+      .badge {
+        display: inline-flex;
+        border-radius: 99px;
+        padding: 6px 8px;
+        background: rgba(51, 214, 159, 0.08);
+        color: var(--green);
+        font:
+          600 9px ui-monospace,
+          monospace;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .badge.amber {
+        background: rgba(245, 165, 36, 0.1);
+        color: var(--amber);
+      }
+      .composer {
+        width: 100%;
+        min-height: 92px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--bg);
+        color: var(--text);
+        padding: 14px;
+        line-height: 1.5;
+        outline: none;
+      }
+      .composer:focus {
+        border-color: rgba(245, 165, 36, 0.6);
+        box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.08);
+      }
+      .button-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .primary,
+      .secondary,
+      .merchant-action {
+        border-radius: 11px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .primary {
+        border: 0;
+        background: var(--amber);
+        color: #171007;
+      }
+      .primary:hover {
+        background: var(--amber2);
+      }
+      .primary:disabled,
+      .merchant-action:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .secondary {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--second);
+      }
+      .secondary:hover {
+        border-color: #39455a;
+        color: var(--text);
+      }
+      .ledger {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .metric {
+        border: 1px solid var(--soft);
+        border-radius: 12px;
+        background: rgba(8, 11, 18, 0.4);
+        padding: 12px;
+      }
+      .metric b {
+        display: block;
+        font:
+          600 16px ui-monospace,
+          monospace;
+      }
+      .metric span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .section {
+        margin-top: 16px;
+      }
+      .section-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--second);
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+      .rows {
+        display: grid;
+        gap: 7px;
+      }
+      .row {
+        border: 1px solid var(--soft);
+        border-radius: 12px;
+        background: rgba(8, 11, 18, 0.46);
+        padding: 11px 12px;
+      }
+      .row-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .row-title {
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .row-meta {
+        margin-top: 5px;
+        color: var(--muted);
+        font:
+          10px/1.5 ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .score {
+        color: var(--amber);
+        font:
+          600 11px ui-monospace,
+          monospace;
+      }
+      .bar {
+        height: 3px;
+        background: var(--line);
+        border-radius: 9px;
+        margin-top: 9px;
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--amber);
+        width: var(--score);
+      }
+      .check-label {
+        color: var(--green);
+        font-size: 10px;
+      }
+      .empty {
+        min-height: 310px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 32px;
+      }
+      .empty strong {
+        display: block;
+        font-size: 16px;
+      }
+      .empty p {
+        max-width: 360px;
+        margin: 8px auto 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .feed {
+        display: grid;
+        gap: 0;
+      }
+      .feed-item {
+        display: grid;
+        grid-template-columns: 18px 1fr auto;
+        gap: 10px;
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--soft);
+      }
+      .feed-item:last-child {
+        border: 0;
+      }
+      .feed-dot {
+        width: 8px;
+        height: 8px;
+        margin-top: 4px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+      .feed-dot.payment {
+        background: var(--blue);
+      }
+      .feed-item strong {
+        display: block;
+        font-size: 12px;
+      }
+      .feed-item p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .feed-time {
+        color: var(--muted);
+        font:
+          9px ui-monospace,
+          monospace;
+      }
+      .plans {
+        display: grid;
+        gap: 9px;
+      }
+      .plan {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(8, 11, 18, 0.45);
+      }
+      .plan.recommended {
+        border-color: rgba(245, 165, 36, 0.45);
+      }
+      .plan-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+      }
+      .plan h3 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .plan p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .plan-price {
+        text-align: right;
+        font:
+          700 17px ui-monospace,
+          monospace;
+      }
+      .plan-price small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font:
+          9px ui-monospace,
+          monospace;
+      }
+      .plan button {
+        margin-top: 12px;
+        width: 100%;
+      }
+      .receipt-link,
+      .hash-link {
+        color: var(--amber);
+        text-decoration: none;
+      }
+      .receipt-link:hover,
+      .hash-link:hover {
+        text-decoration: underline;
+      }
+      .merchant-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 16px;
+      }
+      .order-summary {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+      }
+      .order-items {
+        margin-top: 15px;
+        border-top: 1px solid var(--soft);
+      }
+      .order-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--soft);
+        font-size: 12px;
+      }
+      .order-item span:first-child {
+        color: var(--second);
+      }
+      .progress {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin: 18px 0;
+      }
+      .progress span {
+        height: 4px;
+        border-radius: 8px;
+        background: var(--line);
+      }
+      .progress span.on {
+        background: var(--green);
+      }
+      .merchant-action {
+        width: 100%;
+        border: 0;
+        background: var(--amber);
+        color: #171007;
+        margin-top: 13px;
+      }
+      .proof-input {
+        width: 100%;
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--bg);
+        color: var(--text);
+        padding: 10px;
+        font:
+          12px ui-monospace,
+          monospace;
+        outline: none;
+      }
+      .evidence-list {
+        display: grid;
+        gap: 8px;
+      }
+      .evidence-row {
+        border: 1px solid var(--soft);
+        border-radius: 12px;
+        padding: 11px;
+      }
+      .evidence-row .row-main {
+        font-size: 11px;
+      }
+      .evidence-row code {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 9px;
+        overflow-wrap: anywhere;
+      }
+      .proof-drawer {
+        position: fixed;
+        inset: 64px 0 0 auto;
+        width: min(520px, 100%);
+        background: #0b0f17;
+        border-left: 1px solid var(--line);
+        z-index: 30;
+        transform: translateX(100%);
+        transition: transform 0.22s ease;
+        box-shadow: -24px 0 80px rgba(0, 0, 0, 0.4);
+        overflow: auto;
+      }
+      .proof-drawer.open {
+        transform: none;
+      }
+      .drawer-head {
+        position: sticky;
+        top: 0;
+        background: #0b0f17;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        z-index: 2;
+      }
+      .drawer-head h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+      .close {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: transparent;
+        color: var(--second);
+        padding: 7px 9px;
+        cursor: pointer;
+      }
+      .proof-block {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .proof-block h3 {
+        margin: 0 0 12px;
+        font-size: 12px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr);
+        gap: 8px 12px;
+        font-size: 11px;
+      }
+      .kv dt {
+        color: var(--muted);
+      }
+      .kv dd {
+        margin: 0;
+        font:
+          10px/1.5 ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .tx-list {
+        display: grid;
+        gap: 8px;
+      }
+      .tx {
+        display: grid;
+        grid-template-columns: 92px 1fr auto;
+        gap: 9px;
+        align-items: center;
+        border: 1px solid var(--soft);
+        border-radius: 10px;
+        padding: 9px;
+        font-size: 10px;
+      }
+      .tx code {
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .view {
+        display: none;
+      }
+      .view.active {
+        display: block;
+      }
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        border: 1px solid rgba(51, 214, 159, 0.3);
+        background: #101a1a;
+        color: var(--green);
+        border-radius: 12px;
+        padding: 11px 14px;
+        font-size: 12px;
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition: 0.2s;
+        z-index: 40;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: none;
+      }
+      .mobile-tabs {
+        display: none;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          display: none;
+        }
+        .workspace {
+          padding: 22px 18px 90px;
+        }
+        .grid,
+        .merchant-shell {
+          grid-template-columns: 1fr;
+        }
+        .top-meta .wallet {
+          display: none;
+        }
+        .mobile-tabs {
+          display: grid;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          grid-template-columns: 1fr 1fr;
+          background: #0b0f17;
+          border-top: 1px solid var(--line);
+          z-index: 25;
+        }
+        .mobile-tabs button {
+          border: 0;
+          background: transparent;
+          color: var(--muted);
+          padding: 15px;
+        }
+        .mobile-tabs button.active {
+          color: var(--amber);
+        }
+        .nav {
+          display: none;
+        }
+      }
+      @media (max-width: 620px) {
+        .topbar-inner {
+          padding: 0 14px;
+        }
+        .workspace {
+          padding: 18px 12px 84px;
+        }
+        .page-head {
+          align-items: flex-start;
+        }
+        .page-head h1 {
+          font-size: 21px;
+        }
+        .page-head p {
+          font-size: 12px;
+        }
+        .top-meta .budget {
+          display: none;
+        }
+        .panel-pad {
+          padding: 15px;
+        }
+        .panel-head {
+          padding: 14px 15px;
+        }
+        .ledger {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          display: block;
+        }
+        .grid > .panel + .panel {
+          margin-top: 12px;
+        }
+        .merchant-shell {
+          display: block;
+        }
+        .merchant-shell > .panel + .panel {
+          margin-top: 12px;
+        }
+        .feed-item {
+          padding: 12px 15px;
+        }
+        .proof-button {
+          padding: 8px 10px;
+          font-size: 11px;
+        }
+        .kv {
+          grid-template-columns: 1fr;
+        }
+        .kv dd {
+          margin-bottom: 6px;
+        }
+        .tx {
+          grid-template-columns: 78px 1fr;
+        }
+        .tx a {
+          grid-column: 2;
+        }
+        .page-head .kicker {
+          font-size: 9px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand"><span class="mark">E</span> ERRAND</div>
+          <nav class="nav" aria-label="Workspace">
+            <button data-view="shopper" class="active">Shopper</button
+            ><button data-view="merchant">Merchant</button>
+          </nav>
+          <div class="top-meta">
+            <span class="pill" id="sync-badge">Connecting session</span>
+            <span class="pill budget">Policy &middot; 0.0100 USDC</span
+            ><span class="pill wallet">0xDD2E...6138</span
+            ><span class="pill"
+              ><span class="status-dot"></span>Arc Testnet</span
+            >
+          </div>
+        </div>
+      </header>
+      <div class="layout">
+        <aside class="rail">
+          <div class="rail-title">Verified task</div>
+          <div class="task-card">
+            <strong id="rail-task-title">New shopping task</strong>
+            <p id="rail-task-id">No task created</p>
+          </div>
+          <ol class="stage-list" id="stages"></ol>
+          <div class="rail-actions">
+            <button class="text-button" id="open-evidence-rail">
+              View proof ledger</button
+            ><a
+              class="text-button"
+              href="https://github.com/r0llie/errand-arc"
+              target="_blank"
+              rel="noreferrer"
+              >Open source repository</a
+            ><button class="text-button" id="reset">
+              Reset verified replay
+            </button>
+          </div>
+        </aside>
+        <main class="workspace">
+          <section class="view active" id="shopper-view">
+            <div class="page-head">
+              <div>
+                <div class="kicker">Autonomous purchase workspace</div>
+                <h1>Shopper agent</h1>
+                <p>
+                  Give the agent an outcome. Inspect every decision before funds
+                  move.
+                </p>
+              </div>
+              <button class="proof-button" data-open-proof>
+                Proof ledger &middot; 9 records
+              </button>
+            </div>
+            <div class="grid">
+              <div>
+                <section class="panel">
+                  <div class="panel-head">
+                    <h2>Shopping intent</h2>
+                    <span class="badge amber" id="agent-badge">Ready</span>
+                  </div>
+                  <div class="panel-pad">
+                    <label class="sr-only" for="intent">Shopping request</label
+                    ><textarea class="composer" id="intent">
+I am making meatballs for 4 people</textarea>
+                    <div class="button-row">
+                      <span class="hint"
+                        >Policy: max 0.01 USDC research spend</span
+                      ><button class="primary" id="start-task">
+                        Start agent
+                      </button>
+                    </div>
+                    <div class="ledger">
+                      <div class="metric">
+                        <b id="spent">0.0000</b><span>USDC spent</span>
+                      </div>
+                      <div class="metric">
+                        <b id="remaining">0.0100</b><span>Budget left</span>
+                      </div>
+                      <div class="metric">
+                        <b id="quotes">0 / 5</b><span>Quotes verified</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <section class="panel section">
+                  <div class="panel-head">
+                    <h2>Agent decision log</h2>
+                    <span class="kicker">Deterministic policy</span>
+                  </div>
+                  <div id="activity">
+                    <div class="empty">
+                      <div>
+                        <strong>No decisions yet</strong>
+                        <p>
+                          Start the task to parse the intent, rank nearby
+                          merchants, buy signed quotes and build plans.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <div>
+                <section class="panel">
+                  <div class="panel-head">
+                    <h2>Merchant research</h2>
+                    <span class="badge" id="research-badge">Awaiting task</span>
+                  </div>
+                  <div class="panel-pad" id="research">
+                    <div class="empty">
+                      <div>
+                        <strong>Nothing queried</strong>
+                        <p>
+                          The agent only pays merchants whose signal score
+                          justifies the 0.0005 USDC quote fee.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <section class="panel section">
+                  <div class="panel-head">
+                    <h2>Verified plans</h2>
+                    <span class="kicker">Signed EIP-712 quotes</span>
+                  </div>
+                  <div class="panel-pad" id="plans">
+                    <div class="empty">
+                      <div>
+                        <strong>Plans appear after research</strong>
+                        <p>No order principal moves until you choose a plan.</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+          <section class="view" id="merchant-view">
+            <div class="page-head">
+              <div>
+                <div class="kicker">Merchant operations</div>
+                <h1>Can Butcher</h1>
+                <p>
+                  Advance the selected order and inspect the USDC settlement at
+                  each step.
+                </p>
+              </div>
+              <button class="proof-button" data-open-proof>
+                Proof ledger &middot; 9 records
+              </button>
+            </div>
+            <div class="merchant-shell">
+              <section class="panel">
+                <div class="panel-head">
+                  <h2>Active pickup order</h2>
+                  <span class="badge amber" id="order-badge">No order</span>
+                </div>
+                <div class="panel-pad" id="merchant-order">
+                  <div class="empty">
+                    <div>
+                      <strong>No funded order</strong>
+                      <p>
+                        Run research in the Shopper workspace and choose Lowest
+                        total to create this order.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <div>
+                <section class="panel">
+                  <div class="panel-head">
+                    <h2>Agent API revenue</h2>
+                    <span class="badge" id="revenue-badge">0.0000 USDC</span>
+                  </div>
+                  <div class="panel-pad">
+                    <div class="evidence-list" id="receipts">
+                      <div class="hint">
+                        Paid quote receipts will appear here.
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <section class="panel section">
+                  <div class="panel-head">
+                    <h2>Latest onchain proof</h2>
+                    <span class="kicker">Arcscan</span>
+                  </div>
+                  <div class="panel-pad" id="latest-proof">
+                    <div class="hint">No lifecycle transaction selected.</div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+      <nav class="mobile-tabs" aria-label="Mobile workspace">
+        <button data-view="shopper" class="active">Shopper</button
+        ><button data-view="merchant">Merchant</button>
+      </nav>
+      <aside
+        class="proof-drawer"
+        id="proof-drawer"
+        aria-label="Verified proof ledger"
+        aria-hidden="true"
+      >
+        <div class="drawer-head">
+          <div>
+            <div class="kicker">Recorded on Arc Testnet</div>
+            <h2>Proof ledger</h2>
+          </div>
+          <button class="close" id="close-proof">Close</button>
+        </div>
+        <div id="proof-content"></div>
+      </aside>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script>
+      const explorer = "https://testnet.arcscan.app";
+      const orderId =
+        "0xd435274dd4901f3c934b0077957def98e35b7a9f97f357770d5c0b209317b5df";
+      const contract = "0x40a97F02cBA40C9DcB6fc6845384C65FFA971749";
+      const txs = {
+        approve:
+          "0x4ea3a0bb3f88b8e89ff4ef0670ee6c2a1cf10a724b24739b0a7e9749d5fb6956",
+        fund: "0xa38f118d04986ff59721f0fad6068db2f77128b07fb54d880a859f3dcc8db1e1",
+        preparing:
+          "0xe725c808b69c93834df0ff3458170f3b73fd73ff83c7970461fe4076e80152b9",
+        ready:
+          "0xdb8eae7f966d632509c43d7d9b5bbb2173379f633043fa5aab7f2ef9f6ec37f0",
+        completed:
+          "0x6ebd7300d711320703553e1488f4071264cd2995980745586a20c2b447a5b4c8",
+      };
+      const merchants = [
+        {
+          name: "Can Butcher",
+          score: 0.914,
+          distance: 420,
+          coverage: "8/8",
+          quality: 4.9,
+          receipt: "6e32621d-c6dc-4dd8-87e8-013ded590920",
+          payee: "0xD26b8449EEC09e4193c3A3Be2140Fd5F4DBa0E6b",
+        },
+        {
+          name: "Ali Butcher",
+          score: 0.872,
+          distance: 680,
+          coverage: "7/8",
+          quality: 4.8,
+          receipt: "aa2f60d7-2157-450b-88b7-7437643a843f",
+          payee: "0x70C6dAD02C7d4a4A9B9444E3B16344EF0817184a",
+        },
+        {
+          name: "Cem Bakery",
+          score: 0.793,
+          distance: 310,
+          coverage: "3/8",
+          quality: 4.7,
+          receipt: "48912613-f2bf-481c-a162-45b47da36841",
+          payee: "0xf0AB49865BB680DA12c7b18e4117acD87C966eA7",
+        },
+        {
+          name: "Mini Market",
+          score: 0.748,
+          distance: 190,
+          coverage: "4/8",
+          quality: 4.4,
+          receipt: "settled-recorded",
+          payee: "0x83e6C1D9aD78e6a4391eD231E16FC0F7636Ee05e",
+        },
+        {
+          name: "Zeynep Produce",
+          score: 0.731,
+          distance: 510,
+          coverage: "3/8",
+          quality: 4.8,
+          receipt: "settled-recorded",
+          payee: "0x08F92375Eaa5237CE557116dDF62E7906bBae816",
+        },
+      ];
+      const items = [
+        "Ground beef · 1.0 kg",
+        "Breadcrumbs · 200 g",
+        "Onion · 2 units",
+        "Eggs · 2 units",
+        "Parsley · 1 bunch",
+        "Tomato sauce · 500 ml",
+        "Pasta · 500 g",
+        "Parmesan · 100 g",
+      ];
+      const lifecycle = [
+        {
+          key: "fund",
+          label: "Fund escrow",
+          block: "Verified",
+          gas: "0.001922",
+        },
+        {
+          key: "preparing",
+          label: "Mark preparing",
+          block: "Verified",
+          gas: "0.001311",
+        },
+        {
+          key: "ready",
+          label: "Mark ready",
+          block: "Verified",
+          gas: "0.001248",
+        },
+        {
+          key: "completed",
+          label: "Pickup + release",
+          block: "Verified",
+          gas: "0.003079",
+        },
+      ];
+      const defaultState = {
+        phase: 0,
+        view: "shopper",
+        intent: "I am making meatballs for 4 people",
+        revision: 0,
+      };
+      const requestedSession = new URLSearchParams(location.search).get(
+        "session",
+      );
+      const sessionId = /^[a-z0-9-]{1,48}$/i.test(requestedSession || "")
+        ? requestedSession.toLowerCase()
+        : "public";
+      const actionTargets = {
+        start: 1,
+        research: 2,
+        plans: 3,
+        fund: 4,
+        preparing: 5,
+        ready: 6,
+        release: 7,
+      };
+      let serverReady = false;
+      let syncing = false;
+      let state = readState();
+      function readState() {
+        try {
+          return {
+            ...defaultState,
+            ...JSON.parse(localStorage.getItem("errand-verified-app") || "{}"),
+          };
+        } catch {
+          return { ...defaultState };
+        }
+      }
+      function save() {
+        localStorage.setItem("errand-verified-app", JSON.stringify(state));
+        render();
+      }
+      function setSyncStatus(label, online) {
+        const badge = document.querySelector("#sync-badge");
+        badge.textContent = label;
+        badge.style.color = online ? "var(--green)" : "var(--muted)";
+      }
+      function requestId() {
+        return `web_${crypto.randomUUID().replaceAll("-", "")}`;
+      }
+      async function syncSession({ quiet = true } = {}) {
+        if (syncing) return;
+        syncing = true;
+        if (!quiet) setSyncStatus("Syncing session", false);
+        try {
+          const response = await fetch(
+            `/api/session?session=${encodeURIComponent(sessionId)}`,
+            { cache: "no-store" },
+          );
+          if (!response.ok) throw new Error("Session API unavailable");
+          const payload = await response.json();
+          const next = {
+            ...defaultState,
+            ...payload.state,
+            view: state.view,
+          };
+          const changed =
+            next.phase !== state.phase ||
+            next.revision !== state.revision ||
+            next.intent !== state.intent;
+          state = next;
+          serverReady = true;
+          if (changed) save();
+          setSyncStatus(`Shared · ${sessionId}`, true);
+        } catch {
+          serverReady = false;
+          setSyncStatus("Local fallback", false);
+          if (!quiet)
+            showToast("Shared session unavailable · local replay active");
+        } finally {
+          syncing = false;
+        }
+      }
+      function applyLocalAction(action, intent) {
+        if (action === "reset") {
+          state = { ...defaultState, view: state.view };
+          return;
+        }
+        const target = actionTargets[action];
+        if (target && state.phase === target - 1) {
+          state.phase = target;
+          state.revision = (state.revision || 0) + 1;
+          if (action === "start") state.intent = intent;
+        }
+      }
+      async function runAction(action, message, intent = state.intent) {
+        const previous = { ...state };
+        try {
+          const response = await fetch(
+            `/api/session?session=${encodeURIComponent(sessionId)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action,
+                intent,
+                expectedRevision: state.revision || 0,
+                requestId: requestId(),
+              }),
+            },
+          );
+          const payload = await response.json();
+          if (!response.ok)
+            throw new Error(payload.error || "Session update failed");
+          state = { ...defaultState, ...payload.state, view: previous.view };
+          serverReady = true;
+          save();
+          setSyncStatus(`Shared · ${sessionId}`, true);
+          showToast(message);
+        } catch (error) {
+          if (serverReady) {
+            await syncSession({ quiet: true });
+            showToast(error.message || "Session changed in another window");
+            return;
+          }
+          state = previous;
+          applyLocalAction(action, intent);
+          save();
+          setSyncStatus("Local fallback", false);
+          showToast(`${message} · local fallback`);
+        }
+      }
+      function short(value) {
+        return value.slice(0, 8) + "..." + value.slice(-6);
+      }
+      function showToast(message) {
+        const el = document.querySelector("#toast");
+        el.textContent = message;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2200);
+      }
+      function setView(view) {
+        state.view = view;
+        save();
+      }
+      function stages() {
+        const names = [
+          "Intent parsed",
+          "Merchants ranked",
+          "Quotes purchased",
+          "Plan selected",
+          "Escrow funded",
+          "Preparing",
+          "Ready",
+          "USDC released",
+        ];
+        return names
+          .map((name, index) => {
+            const completed =
+              index < state.phase || (state.phase === 7 && index === 7);
+            const current =
+              state.phase > 0 && state.phase < 7 && index === state.phase;
+            return `<li class="${completed ? "done" : current ? "current" : ""}"><span class="num">${completed ? "✓" : index + 1}</span><span>${name}</span></li>`;
+          })
+          .join("");
+      }
+      function feed() {
+        if (state.phase === 0)
+          return `<div class="empty"><div><strong>No decisions yet</strong><p>Start the task to parse the intent, rank nearby merchants, buy signed quotes and build plans.</p></div></div>`;
+        const entries = [
+          {
+            t: "Intent converted to 8 SKUs",
+            d: "Recipe quantities normalized into deterministic product identifiers.",
+            k: "decision",
+          },
+          {
+            t: "Five merchants selected",
+            d: "Coverage 45% · quality 25% · distance 20% · negotiability 10%.",
+            k: "decision",
+          },
+          {
+            t: "Research budget committed",
+            d: "5 x 0.0005 USDC x402 calls; atomic cap enforcement left 0.0075 USDC.",
+            k: "payment",
+          },
+          {
+            t: "Signed quotes independently verified",
+            d: "Signer, basket hash, total, nonce and expiry all passed EIP-712 validation.",
+            k: "decision",
+          },
+          {
+            t: "Lowest total selected",
+            d: "Can Butcher basket prepared for explicit escrow funding.",
+            k: "decision",
+          },
+          {
+            t: "1.5 USDC funded on Arc",
+            d: "OrderEscrow emitted OrderFunded; principal remains conditional.",
+            k: "payment",
+          },
+          {
+            t: "Merchant marked preparing",
+            d: "Exact merchant wallet advanced the onchain order.",
+            k: "decision",
+          },
+          {
+            t: "Order ready for pickup",
+            d: "Merchant committed readiness on Arc Testnet.",
+            k: "decision",
+          },
+          {
+            t: "Pickup proof accepted",
+            d: "Order completed and 1.5 USDC released to Can Butcher.",
+            k: "payment",
+          },
+        ];
+        const visible = entries.slice(
+          0,
+          Math.min(
+            entries.length,
+            state.phase + (state.phase >= 7 ? 2 : state.phase > 2 ? 1 : 0),
+          ),
+        );
+        return `<div class="feed">${visible.map((e, i) => `<div class="feed-item"><span class="feed-dot ${e.k}"></span><div><strong>${e.t}</strong><p>${e.d}</p></div><span class="feed-time">${String(i + 1).padStart(2, "0")}</span></div>`).join("")}</div>`;
+      }
+      function research() {
+        if (state.phase < 2)
+          return `<div class="empty"><div><strong>${state.phase ? "Intent parsed" : "Nothing queried"}</strong><p>${state.phase ? "Eight exact SKUs are ready. Continue to let the agent rank and pay qualified merchants." : "The agent only pays merchants whose signal score justifies the 0.0005 USDC quote fee."}</p>${state.phase === 1 ? '<button class="primary" id="run-research" style="margin-top:16px">Run paid research</button>' : ""}</div></div>`;
+        return `<div class="section-label"><span>Merchant signal score</span><span>Fee / quote: 0.0005 USDC</span></div><div class="rows">${merchants.map((m) => `<div class="row"><div class="row-main"><div><div class="row-title">${m.name}</div><div class="row-meta">${m.coverage} SKUs · ${m.distance}m · quality ${m.quality}</div></div><div><span class="score">${m.score.toFixed(3)}</span></div></div><div class="bar" style="--score:${m.score * 100}%"><i></i></div><div class="row-meta"><span class="check-label">PAID + SIGNATURE VALID</span> · receipt ${short(m.receipt)}</div></div>`).join("")}</div>`;
+      }
+      function plans() {
+        if (state.phase < 3)
+          return `<div class="empty"><div><strong>${state.phase === 2 ? "Research complete" : "Plans appear after research"}</strong><p>${state.phase === 2 ? "Five paid quotes passed validation. Build deterministic purchase options now." : "No order principal moves until you choose a plan."}</p>${state.phase === 2 ? '<button class="primary" id="build-plans" style="margin-top:16px">Build verified plans</button>' : ""}</div></div>`;
+        if (state.phase > 3)
+          return `<div class="row"><div class="row-main"><div><div class="row-title">Lowest total · selected</div><div class="row-meta">Can Butcher · 8 items · order ${short(orderId)}</div></div><div class="plan-price">1.50<small>USDC</small></div></div><div class="bar" style="--score:100%"><i></i></div></div>`;
+        return `<div class="plans"><article class="plan recommended"><div class="plan-top"><div><h3>Lowest total <span class="badge amber">Recommended</span></h3><p>All 8 items from Can Butcher · one pickup</p></div><div class="plan-price">1.50<small>USDC</small></div></div><button class="primary" id="select-plan">Select and fund recorded order</button></article><article class="plan"><div class="plan-top"><div><h3>Highest quality</h3><p>8 items · 2 merchants · quality-first</p></div><div class="plan-price">1.68<small>USDC</small></div></div><button class="secondary" disabled>Available in live local app</button></article><article class="plan"><div class="plan-top"><div><h3>Shortest route</h3><p>8 items · 2 merchants · 0.7 km</p></div><div class="plan-price">1.61<small>USDC</small></div></div><button class="secondary" disabled>Available in live local app</button></article></div>`;
+      }
+      function merchantOrder() {
+        if (state.phase < 4)
+          return `<div class="empty"><div><strong>No funded order</strong><p>Run research in the Shopper workspace and choose Lowest total to create this order.</p></div></div>`;
+        const orderPhase = Math.max(0, state.phase - 4);
+        const labels = ["Funded", "Preparing", "Ready", "Completed"];
+        let action = "";
+        if (state.phase === 4)
+          action =
+            '<button class="merchant-action" id="advance-order">Accept and mark preparing</button>';
+        if (state.phase === 5)
+          action =
+            '<button class="merchant-action" id="advance-order">Mark ready for pickup</button>';
+        if (state.phase === 6)
+          action =
+            '<label class="kicker" for="pickup">Shopper pickup proof</label><input class="proof-input" id="pickup" value="482731:0x7c4e...a219" /><button class="merchant-action" id="advance-order">Verify pickup and release USDC</button>';
+        if (state.phase >= 7)
+          action =
+            '<div class="badge" style="margin-top:14px">Payment released · complete</div>';
+        return `<div class="order-summary"><div><strong>Order ${short(orderId)}</strong><div class="row-meta">Shopper 0xDD2E...6138 · Arc Testnet escrow</div></div><div class="plan-price">1.50<small>USDC</small></div></div><div class="progress">${[0, 1, 2, 3].map((i) => `<span class="${i <= orderPhase ? "on" : ""}"></span>`).join("")}</div><div class="section-label"><span>${labels[Math.min(orderPhase, 3)]}</span><span>Contract status ${Math.min(orderPhase + 1, 4)} / 4</span></div><div class="order-items">${items.map((item, i) => `<div class="order-item"><span>${item}</span><span>${(0.08 + i * 0.03).toFixed(2)} USDC</span></div>`).join("")}</div>${action}`;
+      }
+      function receipts() {
+        if (state.phase < 2)
+          return '<div class="hint">Paid quote receipts will appear here.</div>';
+        return merchants
+          .map(
+            (m) =>
+              `<div class="evidence-row"><div class="row-main"><strong>${m.name}</strong><span class="check-label">+0.0005</span></div><code>${m.receipt}</code><div class="row-meta">payer 0xDD2E...6138 · eip155:5042002</div></div>`,
+          )
+          .join("");
+      }
+      function latestProof() {
+        if (state.phase < 4)
+          return '<div class="hint">No lifecycle transaction selected.</div>';
+        const index = Math.min(state.phase - 4, 3),
+          entry = lifecycle[index];
+        return `<div class="evidence-row"><div class="row-main"><strong>${entry.label}</strong><span class="check-label">SUCCESS</span></div><code>${txs[entry.key]}</code><div class="row-meta">gas ${entry.gas} USDC · status 1</div><a class="receipt-link row-meta" href="${explorer}/tx/${txs[entry.key]}" target="_blank" rel="noreferrer">Open verified transaction</a></div>`;
+      }
+      function proofLedger() {
+        return `<div class="proof-block"><h3>Escrow identity</h3><dl class="kv"><dt>Network</dt><dd>Arc Testnet · eip155:5042002</dd><dt>Contract</dt><dd><a class="hash-link" target="_blank" rel="noreferrer" href="${explorer}/address/${contract}">${contract}</a></dd><dt>Order ID</dt><dd>${orderId}</dd><dt>Buyer</dt><dd>0xDD2E55714966c9093483d769847Dda5b4a956138</dd><dt>Merchant</dt><dd>0xD26b8449EEC09e4193c3A3Be2140Fd5F4DBa0E6b</dd><dt>Principal</dt><dd>1.5 USDC · released</dd><dt>Final status</dt><dd>Completed (4)</dd></dl></div><div class="proof-block"><h3>x402 paid research</h3><div class="evidence-list">${merchants
+          .slice(0, 3)
+          .map(
+            (m) =>
+              `<div class="evidence-row"><div class="row-main"><strong>${m.name}</strong><span class="check-label">SETTLED</span></div><code>${m.receipt}</code><div class="row-meta">500 micro-USDC · ${m.payee}</div></div>`,
+          )
+          .join(
+            "",
+          )}</div></div><div class="proof-block"><h3>Escrow lifecycle · 5 / 5 receipts success</h3><div class="tx-list"><div class="tx"><span>USDC approve</span><code>${txs.approve}</code><a class="hash-link" href="${explorer}/tx/${txs.approve}" target="_blank" rel="noreferrer">Verify</a></div>${lifecycle.map((e) => `<div class="tx"><span>${e.label}</span><code>${txs[e.key]}</code><a class="hash-link" href="${explorer}/tx/${txs[e.key]}" target="_blank" rel="noreferrer">Verify</a></div>`).join("")}</div><div class="row-meta" style="margin-top:10px">Actual combined gas: 0.007559916 USDC · approved cap: 0.02 USDC</div></div><div class="proof-block"><h3>Code and verification</h3><div class="rows"><a class="row receipt-link" href="https://github.com/r0llie/errand-arc" target="_blank" rel="noreferrer">Public monorepo · 23 automated tests</a><a class="row receipt-link" href="${explorer}/tx/${txs.completed}" target="_blank" rel="noreferrer">Final pickup and release transaction</a></div></div>`;
+      }
+      function render() {
+        document
+          .querySelectorAll(".view")
+          .forEach((el) =>
+            el.classList.toggle("active", el.id === state.view + "-view"),
+          );
+        document
+          .querySelectorAll("[data-view]")
+          .forEach((el) =>
+            el.classList.toggle("active", el.dataset.view === state.view),
+          );
+        document.querySelector("#stages").innerHTML = stages();
+        document.querySelector("#rail-task-title").textContent = state.phase
+          ? "Meatballs for 4"
+          : "New shopping task";
+        document.querySelector("#rail-task-id").textContent = state.phase
+          ? `SESSION ${sessionId.toUpperCase()} · SHARED REPLAY`
+          : "No task created";
+        const intentField = document.querySelector("#intent");
+        if (
+          document.activeElement !== intentField &&
+          intentField.value !== state.intent
+        )
+          intentField.value = state.intent;
+        document.querySelector("#agent-badge").textContent =
+          state.phase >= 7 ? "Completed" : state.phase ? "Active" : "Ready";
+        document.querySelector("#research-badge").textContent =
+          state.phase >= 2 ? "5 signatures valid" : "Awaiting task";
+        document.querySelector("#spent").textContent =
+          state.phase >= 2 ? "0.0025" : "0.0000";
+        document.querySelector("#remaining").textContent =
+          state.phase >= 2 ? "0.0075" : "0.0100";
+        document.querySelector("#quotes").textContent =
+          state.phase >= 2 ? "5 / 5" : "0 / 5";
+        document.querySelector("#activity").innerHTML = feed();
+        document.querySelector("#research").innerHTML = research();
+        document.querySelector("#plans").innerHTML = plans();
+        document.querySelector("#merchant-order").innerHTML = merchantOrder();
+        document.querySelector("#receipts").innerHTML = receipts();
+        document.querySelector("#revenue-badge").textContent =
+          state.phase >= 2 ? "0.0025 USDC" : "0.0000 USDC";
+        document.querySelector("#latest-proof").innerHTML = latestProof();
+        document.querySelector("#order-badge").textContent =
+          state.phase < 4
+            ? "No order"
+            : ["Funded", "Preparing", "Ready", "Completed"][
+                Math.min(state.phase - 4, 3)
+              ];
+        bindDynamic();
+      }
+      function bindDynamic() {
+        document
+          .querySelector("#run-research")
+          ?.addEventListener("click", () =>
+            runAction(
+              "research",
+              "5 paid quotes verified · 0.0025 USDC settled",
+            ),
+          );
+        document
+          .querySelector("#build-plans")
+          ?.addEventListener("click", () =>
+            runAction("plans", "3 deterministic plans built"),
+          );
+        document
+          .querySelector("#select-plan")
+          ?.addEventListener("click", () =>
+            runAction("fund", "Recorded 1.5 USDC escrow funding loaded"),
+          );
+        document
+          .querySelector("#advance-order")
+          ?.addEventListener("click", () => {
+            const action =
+              state.phase === 4
+                ? "preparing"
+                : state.phase === 5
+                  ? "ready"
+                  : "release";
+            return runAction(
+              action,
+              action === "release"
+                ? "Pickup verified · 1.5 USDC released"
+                : "Onchain merchant status updated",
+            );
+          });
+      }
+      document
+        .querySelectorAll("[data-view]")
+        .forEach((el) =>
+          el.addEventListener("click", () => setView(el.dataset.view)),
+        );
+      document.querySelector("#start-task").addEventListener("click", () => {
+        const intent = document.querySelector("#intent").value.trim();
+        runAction("start", "Intent parsed into 8 deterministic SKUs", intent);
+      });
+      document
+        .querySelector("#reset")
+        .addEventListener("click", () =>
+          runAction("reset", "Verified replay reset"),
+        );
+      const drawer = document.querySelector("#proof-drawer");
+      function openProof() {
+        drawer.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+        document.querySelector("#proof-content").innerHTML = proofLedger();
+      }
+      function closeProof() {
+        drawer.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+      document
+        .querySelectorAll("[data-open-proof]")
+        .forEach((el) => el.addEventListener("click", openProof));
+      document
+        .querySelector("#open-evidence-rail")
+        .addEventListener("click", openProof);
+      document
+        .querySelector("#close-proof")
+        .addEventListener("click", closeProof);
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeProof();
+      });
+      window.addEventListener("storage", () => {
+        if (serverReady) return;
+        state = readState();
+        render();
+      });
+      render();
+      syncSession({ quiet: false });
+      setInterval(() => syncSession({ quiet: true }), 1200);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) syncSession({ quiet: true });
+      });
+    </script>
+  </body>
+</html>
